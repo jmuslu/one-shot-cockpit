@@ -19,6 +19,48 @@ if (existsSync(envPath)) {
 
 const fallbackItems = [
   {
+    kind: 'music',
+    title: 'Alan Walker - Faded',
+    source: 'YouTube reference only',
+    url: 'https://www.youtube.com/watch?v=60ItHLz5WEA',
+    reason: 'Iconic vibe reference. Do not bundle or redistribute this audio; stream/embed only if YouTube allows it.'
+  },
+  {
+    kind: 'music',
+    title: 'Alan Walker - Fade / NCS-era reference',
+    source: 'License needs verification',
+    url: 'https://www.youtube.com/results?search_query=Alan+Walker+Fade+official',
+    reason: 'Useful inspiration, but the old NCS availability changed, so treat as reference until licensing is confirmed.'
+  },
+  {
+    kind: 'music',
+    title: 'Provided meme-song reference video',
+    source: 'User reference',
+    url: 'https://www.youtube.com/watch?v=Ha3PktcY5yA&t=136s',
+    reason: 'Use this as taste direction for the waiting-room music pack, not as a bundled audio source.'
+  },
+  {
+    kind: 'music',
+    title: 'Pixabay meme music search',
+    source: 'Royalty-free discovery',
+    url: 'https://pixabay.com/music/search/meme/',
+    reason: 'Good place to source clean meme-ish tracks; check each asset license before committing files.'
+  },
+  {
+    kind: 'music',
+    title: 'Pixabay success and ding sounds',
+    source: 'Royalty-free discovery',
+    url: 'https://pixabay.com/sound-effects/search/success/',
+    reason: 'Candidate source for addictive completion, unlock, and reward sounds.'
+  },
+  {
+    kind: 'music',
+    title: 'NoCopyrightSounds discovery',
+    source: 'Creator-music discovery',
+    url: 'https://www.youtube.com/@NoCopyrightSounds',
+    reason: 'Useful music direction, but each track still needs current terms and attribution checked.'
+  },
+  {
     kind: 'youtube',
     title: 'YouTube discovery queue',
     source: 'Bright Data MCP not configured',

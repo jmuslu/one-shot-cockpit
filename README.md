@@ -109,6 +109,14 @@ The app currently uses generated WebAudio effects. Good asset sources to evaluat
 - Pixabay UI/ding/success/meme sound searches: royalty-free, check each asset license before bundling.
 - Freesound: useful, but license varies per file; prefer CC0 assets.
 
+Music references can be stored as links or embeds without bundling audio files. For example:
+
+- Alan Walker - Faded: reference/embed only; do not redistribute audio.
+- Alan Walker - Fade: license history changed after the NCS era; verify current terms before using as an asset.
+- YouTube meme-song compilations: taste references only unless each underlying track is independently licensed.
+
+The safe path is to keep a `sound-packs/` or user-configured folder for files the user has the right to use, while the public repo ships generated WebAudio and clean-license pointers.
+
 ## Notes
 
 The local SQLite database is generated under `data/` and intentionally ignored by git.

@@ -443,6 +443,21 @@ button {
   font-weight: 800;
 }
 
+.fun-kind.music {
+  background: #f4e8ff;
+  color: #6a35a5;
+}
+
+.fun-kind.youtube {
+  background: #ffe9e7;
+  color: #b13d34;
+}
+
+.fun-kind.game {
+  background: #e7f4ec;
+  color: #18845f;
+}
+
 .fun-card a {
   color: var(--accent);
   font-weight: 800;

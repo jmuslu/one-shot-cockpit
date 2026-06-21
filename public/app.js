@@ -214,7 +214,7 @@ function embedUrl(item) {
     if (url.hostname === 'youtu.be') {
       return `https://www.youtube.com/embed/${url.pathname.slice(1)}`;
     }
-    if (item.kind === 'game' || item.kind === 'web') {
+    if (item.kind === 'game' || item.kind === 'web' || item.kind === 'music') {
       return item.url;
     }
   } catch {
@@ -256,7 +256,7 @@ function renderEntertainmentStage() {
 function renderEntertainment(items) {
   $('#entertainmentList').innerHTML = items.map((item) => `
     <article class="fun-card ${item.id === state.activeEntertainmentId ? 'active' : ''}" data-entertainment="${item.id}">
-      <div class="fun-kind">${escapeHtml(item.kind)}</div>
+      <div class="fun-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.reason || 'Queued for while a shot runs.')}</p>
       <div class="subtle">${escapeHtml(item.source)}${item.linked_shot_title ? ` / ${escapeHtml(item.linked_shot_title)}` : ''}</div>
