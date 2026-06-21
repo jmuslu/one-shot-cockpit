@@ -68,6 +68,26 @@ db.exec(`
   );
 `);
 
+// --- migrations: additive columns + table for the Spec-Kit integration ---
+const shotColumns = db.prepare('PRAGMA table_info(shots)').all().map((column) => column.name);
+if (!shotColumns.includes('phase')) {
+  db.exec("ALTER TABLE shots ADD COLUMN phase TEXT NOT NULL DEFAULT 'brief'");
+}
+if (!shotColumns.includes('spec_dir')) {
+  db.exec("ALTER TABLE shots ADD COLUMN spec_dir TEXT NOT NULL DEFAULT ''");
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS artifacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shot_id INTEGER NOT NULL REFERENCES shots(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 const shotCount = db.prepare('SELECT COUNT(*) AS count FROM shots').get().count;
 
 if (shotCount === 0) {
