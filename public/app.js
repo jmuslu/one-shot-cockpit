@@ -217,11 +217,11 @@ function scheduleAmbient() {
     return;
   }
   const ranges = {
-    1: [30000, 65000],
-    2: [18000, 36000],
-    3: [9000, 19000],
-    4: [4500, 9500],
-    5: [1600, 4200]
+    1: [24000, 52000],
+    2: [10000, 22000],
+    3: [3500, 9000],
+    4: [850, 2400],
+    5: [120, 420]
   };
   const [min, max] = ranges[state.ambientFrequency] || ranges[2];
   const delay = min + Math.random() * (max - min);
@@ -245,7 +245,7 @@ function frequencyLabel(value) {
     2: 'Normal',
     3: 'Busy',
     4: 'Casino floor',
-    5: 'Unhinged'
+    5: 'Unhinged overlap'
   }[value] || 'Normal';
 }
 
