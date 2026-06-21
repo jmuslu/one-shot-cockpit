@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { integrationPlan } from './connectors.js';
 import { clearBrightDataConfig, configureBrightData, discoverEntertainment, getDiscoveryStatus } from './discovery.js';
 import { ioGames, pickIoGame } from './games.js';
+import { ingestSpec, locateSpecPath } from './speckit.js';
+import { runPipeline, continueRun } from './runner.js';
 import {
   addEntertainment,
   answerQuestion,
@@ -102,6 +104,35 @@ async function handleApi(req, res, url) {
     const startMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/start$/);
     if (req.method === 'POST' && startMatch) {
       return sendJson(res, 200, startShot(Number(startMatch[1])));
+    }
+
+    const runMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/run$/);
+    if (req.method === 'POST' && runMatch) {
+      const id = Number(runMatch[1]);
+      runPipeline(id).catch((error) => console.error(`pipeline ${id} failed:`, error.message));
+      return sendJson(res, 202, getDashboard());
+    }
+
+    const continueMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/continue$/);
+    if (req.method === 'POST' && continueMatch) {
+      const id = Number(continueMatch[1]);
+      continueRun(id).catch((error) => console.error(`pipeline ${id} continue failed:`, error.message));
+      return sendJson(res, 202, getDashboard());
+    }
+
+    const specMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/spec$/);
+    if (req.method === 'POST' && specMatch) {
+      const body = await readJson(req);
+      let specPath = body.specPath || '';
+      if (!specPath && !body.specText) {
+        const projectDir = body.projectDir || getSetting('specProjectDir') || process.env.SPEC_PROJECT_DIR || '';
+        specPath = projectDir ? locateSpecPath(projectDir) || '' : '';
+        if (!specPath) {
+          throw new Error('Provide specText, specPath, or a configured spec project dir (settings key "specProjectDir" or env SPEC_PROJECT_DIR).');
+        }
+      }
+      ingestSpec(Number(specMatch[1]), { specText: body.specText, specPath });
+      return sendJson(res, 200, getDashboard());
     }
 
     const completeMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/complete$/);

@@ -182,6 +182,23 @@ export function createShot(input) {
     throw new Error('A title and one-shot prompt are required.');
   }
 
+  const workflow = input.workflow === 'speckit' ? 'speckit' : 'prep-graph';
+
+  // Spec-Kit workflow: skip the prep-graph. The Spec-Kit pipeline (/run) drives
+  // specify → plan → tasks → implement and only asks if something is blocking.
+  // No provider-connect gate — the pipeline uses its own CLI (claude/specify).
+  if (workflow === 'speckit') {
+    const speckitResult = db.prepare(`
+      INSERT INTO shots (title, prompt, status, model, mode, workflow, phase)
+      VALUES (?, ?, 'intake', 'speckit', 'one-shot', 'speckit', 'brief')
+    `).run(title, prompt);
+    const speckitShotId = Number(speckitResult.lastInsertRowid);
+    db.prepare("INSERT INTO messages (shot_id, role, body) VALUES (?, 'user', ?)").run(speckitShotId, prompt);
+    db.prepare("INSERT INTO messages (shot_id, role, body) VALUES (?, 'assistant', ?)")
+      .run(speckitShotId, 'Spec-Kit workflow ready. Click Run one-shot to drive the specify → plan → tasks → implement pipeline.');
+    return getDashboard();
+  }
+
   const provider = findProvider(String(input.runner_provider || input.model || '').trim());
   if (!provider) {
     throw new Error('Choose a runner provider.');
@@ -191,8 +208,8 @@ export function createShot(input) {
   }
 
   const result = db.prepare(`
-    INSERT INTO shots (title, prompt, status, model, mode, runner_provider)
-    VALUES (?, ?, 'intake', ?, 'one-shot', ?)
+    INSERT INTO shots (title, prompt, status, model, mode, runner_provider, workflow)
+    VALUES (?, ?, 'intake', ?, 'one-shot', ?, 'prep-graph')
   `).run(title, prompt, provider.id, provider.id);
   const shotId = Number(result.lastInsertRowid);
 
