@@ -1,6 +1,7 @@
 const state = {
   dashboard: null,
   integrations: null,
+  runners: null,
   activeShotId: null,
   activeEntertainmentId: null,
   activeGame: null,
@@ -375,14 +376,20 @@ function renderActions(shot) {
   }
   if (shot.status === 'running') {
     $('#shotActions').innerHTML = `
-      <button class="primary" data-complete-shot="${shot.id}">Mock complete and ping</button>
-      <span class="subtle">Real runner will notify you when done.</span>
+      <span class="subtle">Run in progress. The runner notifies you when done.</span>
+    `;
+    return;
+  }
+  const unanswered = shot.questions.filter((question) => !question.answer);
+  if (shot.questions.length > 0 && unanswered.length === 0) {
+    $('#shotActions').innerHTML = `
+      <button class="primary" data-submit-shot="${shot.id}">Submit answers & run</button>
+      <span class="subtle">Submitting auto-triggers the one-shot run.</span>
     `;
     return;
   }
   $('#shotActions').innerHTML = `
-    <button class="primary" data-start-shot="${shot.id}">Start one-shot run</button>
-    <span class="subtle">Ask only high-leverage questions, then run.</span>
+    <span class="subtle">Answer the clarifying questions to auto-start the run.</span>
   `;
 }
 
@@ -541,6 +548,37 @@ function renderIntegrations() {
   `).join('');
 }
 
+function renderRunners() {
+  const runners = state.runners;
+  if (!runners) {
+    return;
+  }
+  const select = $('#shotForm select[name="runner"]');
+  if (select) {
+    select.innerHTML = runners.providers.map((provider) => `
+      <option value="${escapeHtml(provider.id)}" ${provider.id === runners.selected ? 'selected' : ''}>
+        ${escapeHtml(provider.name)}${provider.connected ? '' : ' — not connected'}
+      </option>
+    `).join('');
+  }
+  const grid = $('#runnerGrid');
+  if (grid) {
+    grid.innerHTML = runners.providers.map((provider) => `
+      <article class="integration-card ${provider.connected ? 'connected' : 'configure'}">
+        <span class="pill">${provider.connected ? 'connected' : 'connect'}</span>
+        <strong>${escapeHtml(provider.name)}</strong>
+        <p>${escapeHtml(provider.tagline)}</p>
+        <div class="subtle">OAuth sign-in</div>
+        <div class="button-row">
+          ${provider.connected
+            ? `<button class="secondary" data-disconnect-runner="${escapeHtml(provider.id)}">Disconnect</button>`
+            : `<button class="primary" data-connect-runner="${escapeHtml(provider.id)}">Connect ${escapeHtml(provider.name)}</button>`}
+        </div>
+      </article>
+    `).join('');
+  }
+}
+
 function renderSoundMode() {
   const label = state.heldSound === 'random' ? 'random sounds' : `${state.heldSound} only`;
   $('#heldSoundStatus').textContent = `Intermittent mode: ${label}`;
@@ -560,6 +598,7 @@ function render() {
   renderEntertainment(state.dashboard.entertainment);
   renderMemory(state.dashboard.memory);
   renderIntegrations();
+  renderRunners();
   renderOnboarding();
   renderSoundMode();
   if (state.integrations?.discovery) {
@@ -573,12 +612,14 @@ function render() {
 }
 
 async function load() {
-  const [dashboard, integrations] = await Promise.all([
+  const [dashboard, integrations, runners] = await Promise.all([
     request('/api/dashboard'),
-    request('/api/integrations')
+    request('/api/integrations'),
+    request('/api/runners')
   ]);
   state.dashboard = dashboard;
   state.integrations = integrations;
+  state.runners = runners;
   if (!state.activeShotId && dashboard.shots[0]) {
     state.activeShotId = dashboard.shots[0].id;
   }
@@ -590,14 +631,22 @@ async function load() {
 
 $('#shotForm').addEventListener('submit', async (event) => {
   event.preventDefault();
-  state.dashboard = await request('/api/shots', {
-    method: 'POST',
-    body: JSON.stringify(formData(event.currentTarget))
-  });
-  state.activeShotId = state.dashboard.shots[0]?.id || null;
-  playSound('start');
-  event.currentTarget.reset();
-  render();
+  const form = event.currentTarget;
+  const data = formData(form);
+  $('#shotFormMessage').textContent = '';
+  try {
+    state.dashboard = await request('/api/shots', {
+      method: 'POST',
+      body: JSON.stringify({ title: data.title, prompt: data.prompt, runner_provider: data.runner })
+    });
+    state.activeShotId = state.dashboard.shots[0]?.id || null;
+    playSound('start');
+    form.reset();
+    render();
+  } catch (error) {
+    $('#shotFormMessage').textContent = error.message;
+    playSound('hype');
+  }
 });
 
 $('#newShotButton').addEventListener('click', () => {
@@ -703,6 +752,35 @@ document.body.addEventListener('click', async (event) => {
       state.activeVideo = item;
     }
     playSound('select');
+    render();
+    return;
+  }
+
+  const connectRunner = event.target.dataset.connectRunner;
+  if (connectRunner) {
+    state.runners = await request(`/api/runners/${connectRunner}/connect`, { method: 'POST' });
+    playSound('cash');
+    renderRunners();
+    return;
+  }
+
+  const disconnectRunner = event.target.dataset.disconnectRunner;
+  if (disconnectRunner) {
+    state.runners = await request(`/api/runners/${disconnectRunner}/disconnect`, { method: 'POST' });
+    playSound('select');
+    renderRunners();
+    return;
+  }
+
+  const submitShot = event.target.dataset.submitShot;
+  if (submitShot) {
+    try {
+      state.dashboard = await request(`/api/shots/${submitShot}/submit`, { method: 'POST' });
+      playSound('complete');
+    } catch (error) {
+      $('#shotFormMessage').textContent = error.message;
+      playSound('hype');
+    }
     render();
     return;
   }

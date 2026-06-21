@@ -68,6 +68,20 @@ db.exec(`
   );
 `);
 
+// Migration: delegate-to-runner columns (specs §2.4). Added idempotently so
+// existing databases pick up runner_provider / session_id / workspace.
+const shotColumns = new Set(db.prepare('PRAGMA table_info(shots)').all().map((column) => column.name));
+const shotMigrations = [
+  ['runner_provider', "ALTER TABLE shots ADD COLUMN runner_provider TEXT NOT NULL DEFAULT ''"],
+  ['session_id', "ALTER TABLE shots ADD COLUMN session_id TEXT NOT NULL DEFAULT ''"],
+  ['workspace', "ALTER TABLE shots ADD COLUMN workspace TEXT NOT NULL DEFAULT ''"]
+];
+for (const [name, ddl] of shotMigrations) {
+  if (!shotColumns.has(name)) {
+    db.exec(ddl);
+  }
+}
+
 const shotCount = db.prepare('SELECT COUNT(*) AS count FROM shots').get().count;
 
 if (shotCount === 0) {
