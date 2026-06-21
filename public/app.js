@@ -467,7 +467,7 @@ function renderEntertainment(items) {
   $('#discoveriesToggle').textContent = state.discoveriesExpanded ? 'Hide connected discoveries' : 'Show connected discoveries';
   $('#discoveriesSummary').textContent = discoveryConnected
     ? `${items.length} connected discovery cards. ${state.discoveriesExpanded ? 'Expanded' : 'Collapsed'}.`
-    : 'Sign in or add Bright Data MCP for full usage. Until then, Video and Game pull directly into the stages.';
+    : 'Paste your Bright Data token in Integrations for full usage. Until then, Video and Game pull directly into the stages.';
   $('#entertainmentList').innerHTML = discoveryItems.map((item) => `
     <article class="fun-card ${item.id === state.activeEntertainmentId ? 'active' : ''}" data-entertainment="${item.id}">
       <div class="fun-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</div>
@@ -504,7 +504,7 @@ function renderIntegrations() {
     {
       name: 'Bright Data MCP',
       status: discovery.configured ? 'connected' : 'configure',
-      body: discovery.configured ? 'Connected discovery handles Reddit, YouTube, web search, and browsing sources.' : 'Connect/sign in with BRIGHT_DATA_API_TOKEN in .env for full discovery. No separate YouTube or Reddit integration needed.'
+      body: discovery.configured ? 'Token saved locally. Connected discovery handles Reddit, YouTube, web search, and browsing sources.' : 'Bring your own Bright Data token. No separate YouTube or Reddit integration needed.'
     },
     {
       name: 'AI Runner',
@@ -555,7 +555,9 @@ function render() {
   renderSoundMode();
   if (state.integrations?.discovery) {
     const discovery = state.integrations.discovery;
-    $('#discoveryStatus').textContent = `${discovery.provider}: ${discovery.mode}`;
+    $('#discoveryStatus').textContent = discovery.configured
+      ? `${discovery.provider}: connected with local token`
+      : `${discovery.provider}: fallback until token is added`;
   }
   $('#ambientFrequency').value = state.ambientFrequency;
   $('#ambientFrequencyLabel').textContent = frequencyLabel(state.ambientFrequency);
@@ -633,6 +635,30 @@ $('#discoveriesToggle').addEventListener('click', () => {
   state.discoveriesExpanded = !state.discoveriesExpanded;
   playSound('select');
   render();
+});
+
+$('#brightDataForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  $('#brightDataMessage').textContent = 'Connecting local token...';
+  try {
+    state.integrations = await request('/api/integrations/bright-data', {
+      method: 'POST',
+      body: JSON.stringify({
+        token: data.get('token'),
+        mcpUrl: data.get('mcpUrl')
+      })
+    });
+    form.reset();
+    form.elements.mcpUrl.value = state.integrations.discovery?.setup?.hostedUrl?.split('?')[0] || 'https://mcp.brightdata.com/mcp';
+    $('#brightDataMessage').textContent = 'Connected. Token saved locally in .env.';
+    playSound('complete');
+    render();
+  } catch (error) {
+    $('#brightDataMessage').textContent = error.message;
+    playSound('hype');
+  }
 });
 
 document.body.addEventListener('click', async (event) => {

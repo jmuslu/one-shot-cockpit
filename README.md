@@ -65,7 +65,7 @@ User-configured:
 - LLM provider or external runner for real builds
 - Browser notification permission
 - User-provided sound packs
-- Personal interests and login-backed browsing
+- Personal interests and user-connected browsing
 
 The UI includes a first-run setup banner and an Integrations section to make this boundary explicit.
 
@@ -100,7 +100,7 @@ Bright Data MCP is the intended discovery source for the entertainment layer. Th
 POST /api/entertainment/discover
 ```
 
-To configure Bright Data, copy `.env.example` to `.env` and set:
+Bright Data is bring-your-own-token in local development. Use the Integrations panel to paste a token, or copy `.env.example` to `.env` and set:
 
 ```text
 BRIGHT_DATA_API_TOKEN=...

@@ -81,7 +81,7 @@
             </div>
           </div>
           <button id="discoveriesToggle" class="secondary full">Show connected discoveries</button>
-          <div class="discoveries-summary" id="discoveriesSummary">Sign in or add Bright Data MCP for full discovery cards.</div>
+          <div class="discoveries-summary" id="discoveriesSummary">Paste your Bright Data token for full discovery cards.</div>
           <div class="entertainment-list collapsed" id="entertainmentList"></div>
         </aside>
       </section>
@@ -93,6 +93,22 @@
             <h3>Included vs connected</h3>
           </div>
         </div>
+        <form class="bright-data-setup" id="brightDataForm">
+          <div>
+            <strong>Bring your own Bright Data token</strong>
+            <p class="subtle">Paste a local API token to unlock connected Reddit, YouTube, search, and browsing discovery. The token is saved only to this machine's .env file.</p>
+          </div>
+          <label>
+            API token
+            <input name="token" type="password" autocomplete="off" placeholder="BRIGHT_DATA_API_TOKEN">
+          </label>
+          <label>
+            MCP URL
+            <input name="mcpUrl" value="https://mcp.brightdata.com/mcp">
+          </label>
+          <button class="primary" type="submit">Connect token</button>
+          <div class="setup-message" id="brightDataMessage"></div>
+        </form>
         <div class="integration-grid" id="integrationGrid"></div>
       </section>
 

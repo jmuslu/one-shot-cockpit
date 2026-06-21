@@ -440,6 +440,30 @@ button {
   font-weight: 800;
 }
 
+.bright-data-setup {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 1fr) minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(35, 100, 170, 0.18);
+  border-radius: 8px;
+  background: #f7faf9;
+}
+
+.bright-data-setup strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.setup-message {
+  grid-column: 1 / -1;
+  min-height: 18px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .game-status {
   margin-top: -10px;
   color: var(--accent-2);
@@ -680,6 +704,7 @@ button {
   .hero,
   .onboarding,
   .shot-form,
+  .bright-data-setup,
   .integration-grid,
   .sound-grid,
   .memory-grid {

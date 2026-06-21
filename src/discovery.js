@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,6 +15,32 @@ if (existsSync(envPath)) {
     const [key, ...rest] = trimmed.split('=');
     process.env[key] ||= rest.join('=').trim();
   }
+}
+
+function upsertEnv(values) {
+  const existing = existsSync(envPath) ? readFileSync(envPath, 'utf8').split(/\r?\n/) : [];
+  const seen = new Set();
+  const lines = existing.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
+      return line;
+    }
+    const [key] = trimmed.split('=');
+    if (!(key in values)) {
+      return line;
+    }
+    seen.add(key);
+    return `${key}=${values[key]}`;
+  });
+
+  for (const [key, value] of Object.entries(values)) {
+    if (!seen.has(key)) {
+      lines.push(`${key}=${value}`);
+    }
+    process.env[key] = value;
+  }
+
+  writeFileSync(envPath, `${lines.join('\n').replace(/\n*$/, '')}\n`);
 }
 
 const fallbackItems = [
@@ -42,16 +68,34 @@ const fallbackItems = [
 ];
 
 export function getDiscoveryStatus() {
+  const configured = Boolean(process.env.BRIGHT_DATA_API_TOKEN);
   return {
     provider: 'Bright Data MCP',
-    configured: Boolean(process.env.BRIGHT_DATA_API_TOKEN),
-    mode: process.env.BRIGHT_DATA_API_TOKEN ? 'ready-to-wire' : 'fallback',
+    configured,
+    mode: configured ? 'token saved locally' : 'fallback',
+    setupKind: 'bring-your-own-token',
     setup: {
       hostedUrl: 'https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN',
       localCommand: 'npx @brightdata/mcp',
-      env: 'API_TOKEN=YOUR_BRIGHT_DATA_API_TOKEN'
+      env: 'BRIGHT_DATA_API_TOKEN=YOUR_BRIGHT_DATA_API_TOKEN'
     }
   };
+}
+
+export function configureBrightData({ token, mcpUrl }) {
+  const cleanToken = String(token || '').trim();
+  const cleanMcpUrl = String(mcpUrl || 'https://mcp.brightdata.com/mcp').trim();
+  if (cleanToken.length < 12) {
+    throw new Error('Paste a Bright Data API token before connecting.');
+  }
+  if (!cleanMcpUrl.startsWith('http://') && !cleanMcpUrl.startsWith('https://')) {
+    throw new Error('Bright Data MCP URL must start with http:// or https://.');
+  }
+  upsertEnv({
+    BRIGHT_DATA_API_TOKEN: cleanToken,
+    BRIGHT_DATA_MCP_URL: cleanMcpUrl
+  });
+  return getDiscoveryStatus();
 }
 
 export async function discoverEntertainment() {

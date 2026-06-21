@@ -3,7 +3,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { integrationPlan } from './connectors.js';
-import { discoverEntertainment, getDiscoveryStatus } from './discovery.js';
+import { configureBrightData, discoverEntertainment, getDiscoveryStatus } from './discovery.js';
 import { ioGames, pickIoGame } from './games.js';
 import {
   addEntertainment,
@@ -49,6 +49,11 @@ async function handleApi(req, res, url) {
 
     if (req.method === 'GET' && url.pathname === '/api/integrations') {
       return sendJson(res, 200, { ...integrationPlan, discovery: getDiscoveryStatus() });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/integrations/bright-data') {
+      const discovery = configureBrightData(await readJson(req));
+      return sendJson(res, 200, { ...integrationPlan, discovery });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/shots') {
