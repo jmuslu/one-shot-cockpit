@@ -14,7 +14,7 @@ The key product rule is that completed shots do not become normal follow-up chat
 - Locked completed results
 - Waiting-room entertainment panel for Reddit, YouTube, and web-game roulette integrations
 - Same-page entertainment preview stage with external-link fallback for sources that block embedding
-- Native generated WebAudio feedback sounds for selection, run start, completion, obnoxious casino-style ca-ching, hype hits, original arcade vocal stingers, and optional intermittent stingers with adjustable frequency plus held-sound mode
+- Native generated WebAudio feedback sounds for selection, run start, completion, obnoxious casino-style ca-ching, hype hits, real recorded voice stingers, and optional intermittent stingers with adjustable frequency plus held-sound mode
 - Bundled Kenney Casino Audio chip clips as the physical coin/chip layer for ca-ching
 - Bundled Kenney Voiceover Pack clips as real recorded CC0 voice stingers
 - Integration plan placeholders for direct AI, Codex/Claude delegation, Bright Data MCP, and game roulette
@@ -130,7 +130,7 @@ The next code step is binding Bright Data tools such as `search_engine` and `scr
 
 The app uses generated WebAudio effects plus bundled Kenney Casino Audio chip clips for the ca-ching. Kenney Casino Audio is CC0 and the license is included at `public/sounds/casino/KENNEY_CASINO_AUDIO_LICENSE.txt`.
 
-The app also bundles selected Kenney Voiceover Pack clips for real recorded voice stingers. Kenney Voiceover Pack is CC0 and the license is included at `public/sounds/voice/KENNEY_VOICEOVER_LICENSE.txt`. The synthetic arcade vocal stingers remain original effects, not ripped character audio or official character voice lines.
+The app also bundles selected Kenney Voiceover Pack clips for real recorded voice stingers. Kenney Voiceover Pack is CC0 and the license is included at `public/sounds/voice/KENNEY_VOICEOVER_LICENSE.txt`.
 
 Good asset sources to evaluate for future user-provided sound packs:
 

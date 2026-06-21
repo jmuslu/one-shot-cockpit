@@ -179,31 +179,6 @@ function filteredNoise(start, duration, gain, frequency, type = 'bandpass') {
   source.stop(ctx.currentTime + start + duration + 0.02);
 }
 
-function vocalBlip(notes, start = 0, gain = 0.055) {
-  if (!state.sound) {
-    return;
-  }
-  const ctx = audio();
-  notes.forEach((note, index) => {
-    const at = start + index * 0.075;
-    const osc = ctx.createOscillator();
-    const formant = ctx.createBiquadFilter();
-    const amp = ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(note, ctx.currentTime + at);
-    osc.frequency.exponentialRampToValueAtTime(note * 1.08, ctx.currentTime + at + 0.055);
-    formant.type = 'bandpass';
-    formant.frequency.setValueAtTime(900 + index * 330, ctx.currentTime + at);
-    formant.Q.setValueAtTime(7, ctx.currentTime + at);
-    amp.gain.setValueAtTime(0.0001, ctx.currentTime + at);
-    amp.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + at + 0.012);
-    amp.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.105);
-    osc.connect(formant).connect(amp).connect(ctx.destination);
-    osc.start(ctx.currentTime + at);
-    osc.stop(ctx.currentTime + at + 0.13);
-  });
-}
-
 function playSound(name) {
   if (!state.sound) {
     return;
@@ -248,19 +223,10 @@ function playSound(name) {
     noise(0, 0.11, 0.045);
     return;
   }
-  if (name === 'yahoo') {
-    vocalBlip([523.25, 659.25, 880], 0, 0.06);
-    tone(1760, 0.18, 0.08, 0.035, 'triangle');
-    return;
-  }
-  if (name === 'yelp') {
-    vocalBlip([880, 739.99, 622.25, 830.61], 0, 0.052);
-    filteredNoise(0.03, 0.09, 0.025, 2400, 'bandpass');
-    return;
-  }
   if (name === 'voiceWin' || name === 'voiceLookout' || name === 'voiceWrong' || name === 'voicePower') {
     if (!playVoiceSample(name)) {
-      vocalBlip([659.25, 880, 1174.66], 0, 0.055);
+      tone(659.25, 0, 0.08, 0.045, 'triangle');
+      tone(880, 0.06, 0.08, 0.045, 'sine');
     }
     return;
   }
@@ -304,7 +270,7 @@ function nextAmbientSound() {
   if (state.heldSound && state.heldSound !== 'random') {
     return state.heldSound;
   }
-  const pool = ['select', 'complete', 'cash', 'hype', 'ambient', 'cash', 'yahoo', 'yelp', 'voiceWin', 'voiceLookout', 'voiceWrong'];
+  const pool = ['select', 'complete', 'cash', 'hype', 'ambient', 'cash', 'voiceWin', 'voiceLookout', 'voiceWrong'];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
