@@ -10,7 +10,8 @@ const state = {
   holdTimer: null,
   heldSound: localStorage.getItem('heldSound') || 'random',
   ambientFrequency: Number(localStorage.getItem('ambientFrequency') || 2),
-  casinoSamples: []
+  casinoSamples: [],
+  voiceSamples: {}
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -64,6 +65,13 @@ const casinoSamplePaths = [
   '/sounds/casino/chips-stack-1.ogg'
 ];
 
+const voiceSamplePaths = {
+  voiceWin: '/sounds/voice/you-win.ogg',
+  voiceLookout: '/sounds/voice/look-out.ogg',
+  voiceWrong: '/sounds/voice/wrong.ogg',
+  voicePower: '/sounds/voice/power-up.ogg'
+};
+
 function preloadCasinoSamples() {
   state.casinoSamples = casinoSamplePaths.map((path) => {
     const sample = new Audio(path);
@@ -71,6 +79,15 @@ function preloadCasinoSamples() {
     sample.volume = 0.8;
     return sample;
   });
+}
+
+function preloadVoiceSamples() {
+  state.voiceSamples = Object.fromEntries(Object.entries(voiceSamplePaths).map(([name, path]) => {
+    const sample = new Audio(path);
+    sample.preload = 'auto';
+    sample.volume = 0.82;
+    return [name, sample];
+  }));
 }
 
 function playCasinoSample(index, delay = 0, volume = 0.8, rate = 1) {
@@ -84,6 +101,17 @@ function playCasinoSample(index, delay = 0, volume = 0.8, rate = 1) {
     sample.playbackRate = rate;
     void sample.play().catch(() => {});
   }, delay);
+}
+
+function playVoiceSample(name, volume = 0.85, rate = 1) {
+  if (!state.sound || !state.voiceSamples[name]) {
+    return false;
+  }
+  const sample = state.voiceSamples[name].cloneNode();
+  sample.volume = volume;
+  sample.playbackRate = rate;
+  void sample.play().catch(() => {});
+  return true;
 }
 
 function tone(frequency, start, duration, gain, type = 'sine') {
@@ -230,6 +258,12 @@ function playSound(name) {
     filteredNoise(0.03, 0.09, 0.025, 2400, 'bandpass');
     return;
   }
+  if (name === 'voiceWin' || name === 'voiceLookout' || name === 'voiceWrong' || name === 'voicePower') {
+    if (!playVoiceSample(name)) {
+      vocalBlip([659.25, 880, 1174.66], 0, 0.055);
+    }
+    return;
+  }
   if (name === 'ambient') {
     const choice = Math.random();
     if (choice < 0.34) {
@@ -270,7 +304,7 @@ function nextAmbientSound() {
   if (state.heldSound && state.heldSound !== 'random') {
     return state.heldSound;
   }
-  const pool = ['select', 'complete', 'cash', 'hype', 'ambient', 'cash', 'yahoo', 'yelp'];
+  const pool = ['select', 'complete', 'cash', 'hype', 'ambient', 'cash', 'yahoo', 'yelp', 'voiceWin', 'voiceLookout', 'voiceWrong'];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -737,3 +771,4 @@ load().catch((error) => {
 });
 
 preloadCasinoSamples();
+preloadVoiceSamples();
