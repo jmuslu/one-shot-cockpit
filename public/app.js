@@ -3,6 +3,7 @@ const state = {
   integrations: null,
   activeShotId: null,
   activeEntertainmentId: null,
+  activeGame: null,
   sound: true,
   audioContext: null,
   ambient: false,
@@ -47,6 +48,10 @@ function selectedShot() {
 
 function selectedEntertainment() {
   return state.dashboard?.entertainment.find((item) => item.id === state.activeEntertainmentId) || state.dashboard?.entertainment[0] || null;
+}
+
+function selectedStageItem() {
+  return state.activeGame || selectedEntertainment();
 }
 
 function audio() {
@@ -417,7 +422,7 @@ function embedUrl(item) {
 }
 
 function renderEntertainmentStage() {
-  const item = selectedEntertainment();
+  const item = selectedStageItem();
   if (!item) {
     $('#entertainmentStage').innerHTML = '<div class="stage-empty">Pick something from the feed.</div>';
     return;
@@ -433,6 +438,9 @@ function renderEntertainmentStage() {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
         referrerpolicy="strict-origin-when-cross-origin"
       ></iframe>
+      <div class="stage-note">
+        ${item.kind === 'game' ? 'If the game blocks embedding or shows a blank frame, open it externally.' : ''}
+      </div>
     `;
     return;
   }
@@ -573,17 +581,18 @@ $('#newShotButton').addEventListener('click', () => {
 });
 
 $('#addGameButton').addEventListener('click', async () => {
-  state.dashboard = await request('/api/entertainment', {
-    method: 'POST',
-    body: JSON.stringify({
-      kind: 'game',
-      title: 'Random io game slot',
-      source: 'manual roulette',
-      reason: 'Placeholder for a web-game picker integration.'
-    })
-  });
-  state.activeEntertainmentId = state.dashboard.entertainment[0]?.id || null;
-  playSound('select');
+  const result = await request('/api/games/roulette', { method: 'POST' });
+  state.dashboard = result.dashboard;
+  state.activeGame = result.game ? {
+    id: 'game-roulette',
+    kind: 'game',
+    title: result.game.title,
+    source: 'io game roulette',
+    url: result.game.url,
+    reason: result.game.reason
+  } : null;
+  $('#gameStatus').textContent = result.game ? `Loaded ${result.game.title}` : 'Loaded game.';
+  playSound('cash');
   render();
 });
 
@@ -613,6 +622,7 @@ document.body.addEventListener('click', async (event) => {
 
   const entertainment = event.target.closest('[data-entertainment]')?.dataset.entertainment;
   if (entertainment) {
+    state.activeGame = null;
     state.activeEntertainmentId = Number(entertainment);
     playSound('select');
     render();

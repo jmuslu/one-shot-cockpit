@@ -403,6 +403,7 @@ button {
 }
 
 .stage {
+  position: relative;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -410,11 +411,32 @@ button {
   background: #12161c;
 }
 
+.stage-note {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(18, 22, 28, 0.82);
+  color: #dfe7e3;
+  font-size: 12px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
 .discovery-status {
   margin-top: -6px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.game-status {
+  margin-top: -10px;
+  color: var(--accent-2);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .stage iframe {

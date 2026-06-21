@@ -72,6 +72,10 @@ export function updateSetting(key, value) {
   return getDashboard();
 }
 
+export function getSetting(key, fallback = '') {
+  return db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value || fallback;
+}
+
 export function createShot(input) {
   const title = String(input.title || '').trim();
   const prompt = String(input.prompt || '').trim();

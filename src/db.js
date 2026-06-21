@@ -120,7 +120,7 @@ if (shotCount === 0) {
 
   insertEntertainment.run('reddit', 'r/InternetIsBeautiful rabbit-hole batch', 'Bright Data MCP planned', 'https://www.reddit.com/r/InternetIsBeautiful/', 'Something to browse while a shot runs.', 1);
   insertEntertainment.run('youtube', 'Short game-dev video queue', 'YouTube pull planned', 'https://www.youtube.com/', 'Relevant to project-building mood without being work.', 1);
-  insertEntertainment.run('game', 'Web game roulette slot', 'io game picker planned', '', 'Random playable web game while waiting for completion.', null);
+  insertEntertainment.run('game', 'Diep.io', 'io game picker', 'https://diep.io/', 'Tank arena classic. Good quick background chaos.', null);
 
   insertMemory.run('one-shot rule', 'Completed shots are locked. Follow-up refinement happens by starting a new shot or opening the artifact in a serious external tool.', 'product-rule');
   insertMemory.run('waiting-room layer', 'The entertainment panel exists to occupy attention while the project runs, not to become the project itself.', 'product-rule');

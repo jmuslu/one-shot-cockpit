@@ -4,6 +4,7 @@ import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { integrationPlan } from './connectors.js';
 import { discoverEntertainment, getDiscoveryStatus } from './discovery.js';
+import { ioGames, pickIoGame } from './games.js';
 import {
   addEntertainment,
   addEntertainmentItems,
@@ -11,6 +12,7 @@ import {
   completeShot,
   createShot,
   getDashboard,
+  getSetting,
   startShot,
   updateSetting
 } from './repository.js';
@@ -71,6 +73,19 @@ async function handleApi(req, res, url) {
 
     if (req.method === 'POST' && url.pathname === '/api/entertainment') {
       return sendJson(res, 201, addEntertainment(await readJson(req)));
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/games') {
+      return sendJson(res, 200, { games: ioGames });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/games/roulette') {
+      const game = pickIoGame(getSetting('lastIoGameUrl'));
+      updateSetting('lastIoGameUrl', game.url);
+      return sendJson(res, 201, {
+        dashboard: getDashboard(),
+        game
+      });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/entertainment/discover') {
