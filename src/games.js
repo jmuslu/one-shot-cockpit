@@ -42,7 +42,7 @@ export const ioGames = [
   {
     title: 'Zombs Royale',
     url: 'https://zombsroyale.io/',
-    reason: 'Battle royale-ish replacement energy for the old surviv.io slot.'
+    reason: 'Fast browser battle royale energy for the game stage.'
   },
   {
     title: 'Smash Karts',

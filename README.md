@@ -55,7 +55,7 @@ Out of the box:
 - Local dashboard
 - SQLite state
 - Mock one-shot completion
-- Manual entertainment queue
+- Manual/connected discovery drawer
 - Generated UI sounds
 - Fallback discovery links
 
@@ -73,7 +73,7 @@ The UI includes a first-run setup banner and an Integrations section to make thi
 
 - Direct LLM runner
 - Codex or Claude Code delegation for real project execution
-- Bright Data MCP for public Reddit, YouTube, search, and discovery feeds
+- Bright Data MCP for public Reddit, YouTube, search, and discovery feeds. Separate YouTube/Reddit integrations are not needed for the first connected version.
 - Web-game roulette for lightweight browser games while waiting
 - Desktop/browser notifications when a shot completes
 
@@ -94,7 +94,7 @@ Entertainment cards are for browsable content: YouTube, Reddit, io games, and we
 
 ## Bright Data MCP
 
-Bright Data MCP is the intended discovery source for the entertainment layer. The app now has a discovery endpoint and fallback queue:
+Bright Data MCP is the intended discovery source for the entertainment layer. The app now has a discovery endpoint and a collapsed connected-discoveries drawer:
 
 ```text
 POST /api/entertainment/discover

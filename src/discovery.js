@@ -20,10 +20,10 @@ if (existsSync(envPath)) {
 const fallbackItems = [
   {
     kind: 'youtube',
-    title: 'YouTube discovery queue',
+    title: 'Web games video fallback',
     source: 'Bright Data MCP not configured',
-    url: 'https://www.youtube.com/results?search_query=weird+web+games',
-    reason: 'Fallback search until BRIGHT_DATA_API_TOKEN is configured.'
+    url: 'https://www.youtube.com/watch?v=kHGgOVo_C4w',
+    reason: 'Embeddable fallback video until BRIGHT_DATA_API_TOKEN is configured.'
   },
   {
     kind: 'reddit',

@@ -5,7 +5,7 @@ const state = {
   activeEntertainmentId: null,
   activeGame: null,
   activeVideo: null,
-  queueExpanded: false,
+  discoveriesExpanded: false,
   sound: true,
   audioContext: null,
   ambient: false,
@@ -300,7 +300,7 @@ function renderStats(stats) {
     ['running', stats.running],
     ['intake', stats.intake],
     ['done', stats.done],
-    ['queued fun', stats.queuedEntertainment]
+    ['discoveries', stats.queuedEntertainment]
   ].map(([label, value]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
 }
 
@@ -456,23 +456,23 @@ function renderStage(selector, item, emptyText) {
 }
 
 function renderEntertainmentStages() {
-  renderStage('#videoStage', selectedVideo(), 'Pull a video or select one from the queue.');
+  renderStage('#videoStage', selectedVideo(), 'Pull a video or select one from connected discoveries.');
   renderStage('#gameStage', state.activeGame, 'Pull an io game.');
 }
 
 function renderEntertainment(items) {
   const discoveryConnected = Boolean(state.integrations?.discovery?.configured);
-  const queueItems = state.queueExpanded ? items.slice(0, 16) : items.slice(0, 4);
-  $('#entertainmentList').classList.toggle('collapsed', !state.queueExpanded);
-  $('#queueToggle').textContent = state.queueExpanded ? 'Hide queue' : 'Show queue';
-  $('#queueSummary').textContent = discoveryConnected
-    ? `${items.length} discovered items. Queue ${state.queueExpanded ? 'expanded' : 'collapsed'}.`
-    : 'Queue is collapsed until Bright Data MCP is connected. Fallback pulls preview directly in the stage.';
-  $('#entertainmentList').innerHTML = queueItems.map((item) => `
+  const discoveryItems = state.discoveriesExpanded ? items.slice(0, 16) : items.slice(0, 4);
+  $('#entertainmentList').classList.toggle('collapsed', !state.discoveriesExpanded);
+  $('#discoveriesToggle').textContent = state.discoveriesExpanded ? 'Hide connected discoveries' : 'Show connected discoveries';
+  $('#discoveriesSummary').textContent = discoveryConnected
+    ? `${items.length} connected discovery cards. ${state.discoveriesExpanded ? 'Expanded' : 'Collapsed'}.`
+    : 'Sign in or add Bright Data MCP for full usage. Until then, Video and Game pull directly into the stages.';
+  $('#entertainmentList').innerHTML = discoveryItems.map((item) => `
     <article class="fun-card ${item.id === state.activeEntertainmentId ? 'active' : ''}" data-entertainment="${item.id}">
       <div class="fun-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</div>
       <strong>${escapeHtml(item.title)}</strong>
-      <p>${escapeHtml(item.reason || 'Queued for while a shot runs.')}</p>
+      <p>${escapeHtml(item.reason || 'Saved discovery item.')}</p>
       <div class="subtle">${escapeHtml(item.source)}${item.linked_shot_title ? ` / ${escapeHtml(item.linked_shot_title)}` : ''}</div>
       <div class="button-row">
         <button class="secondary" data-entertainment="${item.id}">Preview</button>
@@ -504,7 +504,7 @@ function renderIntegrations() {
     {
       name: 'Bright Data MCP',
       status: discovery.configured ? 'connected' : 'configure',
-      body: discovery.configured ? 'Ready for real public web discovery.' : 'Add BRIGHT_DATA_API_TOKEN in .env to replace fallback discovery.'
+      body: discovery.configured ? 'Connected discovery handles Reddit, YouTube, web search, and browsing sources.' : 'Connect/sign in with BRIGHT_DATA_API_TOKEN in .env for full discovery. No separate YouTube or Reddit integration needed.'
     },
     {
       name: 'AI Runner',
@@ -629,8 +629,8 @@ $('#discoverButton').addEventListener('click', async () => {
   render();
 });
 
-$('#queueToggle').addEventListener('click', () => {
-  state.queueExpanded = !state.queueExpanded;
+$('#discoveriesToggle').addEventListener('click', () => {
+  state.discoveriesExpanded = !state.discoveriesExpanded;
   playSound('select');
   render();
 });
