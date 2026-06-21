@@ -128,7 +128,47 @@ shots:  + runner_provider TEXT    -- which agent ran this shot (replaces/extends
 - **Which OAuth-capable providers** populate the initial options list (e.g. Claude,
   OpenAI/Codex, GitHub Copilot, Gemini). To be configured iteratively.
 
-## 4. Later ⚪
+## 5. Agent build loop 🟢
+
+The run step actually drives an agent that builds files into the shot's workspace.
+
+### 5.1 Provider-agnostic shell adapter
+
+The cockpit is agnostic to *which* agent runs. A single configured shell command
+is the agent — set via `ONESHOT_AGENT_CMD` (in `.env`):
+
+- The built prompt (brief + clarifying answers) is **piped to the command's stdin**,
+  or substituted for `{prompt}` if the template contains that token.
+- The command runs with `cwd` = the shot's workspace, so the agent writes real
+  files there.
+- Works with any CLI agent: `claude -p ...`, `codex exec {prompt}`, etc.
+- If `ONESHOT_AGENT_CMD` is unset, the run falls back to a simulated outcome so the
+  flow never breaks.
+
+### 5.2 Permissions 🟢
+
+Headless `-p` runs can't prompt mid-run, so the agent needs standing permission.
+Default is **`acceptEdits`** (file writes only, no arbitrary shell) — the safest
+practical setting. `bypassPermissions` (full autonomy) is available but unconfined;
+choose per risk tolerance.
+
+### 5.3 Async lifecycle
+
+- `runShot` sets the shot to `running`, writes `answers.md` into the workspace, then
+  spawns the agent **asynchronously** and returns immediately (shot stays `running`).
+- On process exit, `finalizeShot` flips the shot to `done` with the agent's output as
+  the summary. A 5-minute timeout kills a hung agent and finalizes anyway.
+- The frontend **polls** `/api/dashboard` while any shot is `running` and plays the
+  completion sound on the `running → done` transition.
+
+### 5.4 Workspace inputs
+
+Each shot's `outputs/shot-<id>/` is seeded with:
+- `prompt.md` — title, runner, session id, and the brief (written at create).
+- `answers.md` — the clarifying Q&A (written at run, when answered).
+The agent's deliverables land alongside these. `outputs/` is gitignored.
+
+## 6. Later ⚪
 
 Reserved for specs we add iteratively (intake heuristics, run progress/streaming,
 notifications, entertainment layer, Bright Data MCP binding, etc.).
