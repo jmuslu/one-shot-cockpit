@@ -111,6 +111,11 @@
           <button class="secondary" type="button" id="clearBrightData">Clear saved token</button>
           <div class="setup-message" id="brightDataMessage"></div>
         </form>
+        <div class="runner-block">
+          <strong>Runner providers</strong>
+          <p class="subtle">OAuth-only options. Connect a provider, then it can run one-shots. The token stays with the provider; the cockpit stores only connection status.</p>
+        </div>
+        <div class="integration-grid" id="runnerGrid"></div>
         <div class="integration-grid" id="integrationGrid"></div>
       </section>
 
@@ -182,14 +187,10 @@
           </label>
           <label>
             Runner
-            <select name="model">
-              <option value="direct-ai">Direct AI integration</option>
-              <option value="codex-delegate">Codex delegate</option>
-              <option value="claude-delegate">Claude Code delegate</option>
-              <option value="zeroclaw">ZeroClaw daemon</option>
-            </select>
+            <select name="runner"></select>
           </label>
           <button type="submit" class="primary">Create shot</button>
+          <div class="setup-message" id="shotFormMessage"></div>
         </form>
       </section>
 

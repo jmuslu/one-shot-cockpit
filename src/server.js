@@ -9,10 +9,14 @@ import {
   addEntertainment,
   answerQuestion,
   completeShot,
+  connectRunner,
   createShot,
+  disconnectRunner,
   getDashboard,
+  getRunners,
   getSetting,
   startShot,
+  submitAnswers,
   updateSetting
 } from './repository.js';
 
@@ -60,8 +64,27 @@ async function handleApi(req, res, url) {
       return sendJson(res, 200, { ...integrationPlan, discovery });
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/runners') {
+      return sendJson(res, 200, getRunners());
+    }
+
+    const connectMatch = url.pathname.match(/^\/api\/runners\/([\w-]+)\/connect$/);
+    if (req.method === 'POST' && connectMatch) {
+      return sendJson(res, 200, connectRunner(connectMatch[1]));
+    }
+
+    const disconnectMatch = url.pathname.match(/^\/api\/runners\/([\w-]+)\/disconnect$/);
+    if (req.method === 'POST' && disconnectMatch) {
+      return sendJson(res, 200, disconnectRunner(disconnectMatch[1]));
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/shots') {
       return sendJson(res, 201, createShot(await readJson(req)));
+    }
+
+    const submitMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/submit$/);
+    if (req.method === 'POST' && submitMatch) {
+      return sendJson(res, 200, submitAnswers(Number(submitMatch[1])));
     }
 
     const startMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/start$/);

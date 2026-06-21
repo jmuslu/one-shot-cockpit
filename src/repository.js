@@ -1,4 +1,14 @@
+import { mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
+import { RUNNER_PROVIDERS, findProvider, getAdapter } from './runners.js';
+
+const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
+
+function runnerConnectedKey(id) {
+  return `runner:${id}:connected`;
+}
 
 function getMessages(shotId) {
   return db.prepare(`
@@ -76,6 +86,46 @@ export function getSetting(key, fallback = '') {
   return db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value || fallback;
 }
 
+// --- Runner providers (specs §2.1) ---------------------------------------
+// Connection status is non-secret state (a boolean), so it is safe in the
+// settings table. Tokens never touch SQLite — they stay with the provider.
+
+export function getRunners() {
+  const selected = getSetting('runner:selected', RUNNER_PROVIDERS[0]?.id || '');
+  return {
+    selected,
+    providers: RUNNER_PROVIDERS.map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      authMode: provider.authMode,
+      tagline: provider.tagline,
+      connected: getSetting(runnerConnectedKey(provider.id)) === 'true'
+    }))
+  };
+}
+
+export function connectRunner(id) {
+  const provider = findProvider(id);
+  if (!provider) {
+    throw new Error('Unknown runner provider.');
+  }
+  // Stub for the provider's OAuth flow. A real adapter launches the provider
+  // sign-in; the provider persists its own token. We store only a non-secret
+  // connected status — never a token.
+  updateSetting(runnerConnectedKey(id), 'true');
+  updateSetting('runner:selected', id);
+  return getRunners();
+}
+
+export function disconnectRunner(id) {
+  const provider = findProvider(id);
+  if (!provider) {
+    throw new Error('Unknown runner provider.');
+  }
+  updateSetting(runnerConnectedKey(id), 'false');
+  return getRunners();
+}
+
 export function createShot(input) {
   const title = String(input.title || '').trim();
   const prompt = String(input.prompt || '').trim();
@@ -83,16 +133,120 @@ export function createShot(input) {
     throw new Error('A title and one-shot prompt are required.');
   }
 
+  const provider = findProvider(String(input.runner_provider || input.model || '').trim());
+  if (!provider) {
+    throw new Error('Choose a runner provider.');
+  }
+  if (getSetting(runnerConnectedKey(provider.id)) !== 'true') {
+    throw new Error(`Connect ${provider.name} before starting a shot.`);
+  }
+
   const result = db.prepare(`
-    INSERT INTO shots (title, prompt, status, model, mode)
-    VALUES (?, ?, 'intake', ?, 'one-shot')
-  `).run(title, prompt, String(input.model || 'direct-ai').trim());
+    INSERT INTO shots (title, prompt, status, model, mode, runner_provider)
+    VALUES (?, ?, 'intake', ?, 'one-shot', ?)
+  `).run(title, prompt, provider.id, provider.id);
+  const shotId = Number(result.lastInsertRowid);
 
   db.prepare(`
     INSERT INTO messages (shot_id, role, body)
     VALUES (?, 'user', ?)
-  `).run(result.lastInsertRowid, prompt);
+  `).run(shotId, prompt);
 
+  // createShot starts the agent session (specs §1.1). The clarifying questions
+  // are real adapter output, not hardcoded.
+  const workspace = `outputs/shot-${shotId}`;
+  mkdirSync(join(rootDir, workspace), { recursive: true });
+  const session = getAdapter(provider.id).startSession(prompt, workspace);
+
+  db.prepare('UPDATE shots SET session_id = ?, workspace = ? WHERE id = ?')
+    .run(String(session.sessionId), workspace, shotId);
+
+  db.prepare(`
+    INSERT INTO messages (shot_id, role, body)
+    VALUES (?, 'assistant', ?)
+  `).run(
+    shotId,
+    session.questions.length
+      ? `${provider.name} session started. A few clarifying questions first.`
+      : `${provider.name} session started. No clarifying questions needed — running now.`
+  );
+
+  const insertQuestion = db.prepare(`
+    INSERT INTO clarifying_questions (shot_id, question, answer)
+    VALUES (?, ?, '')
+  `);
+  for (const question of session.questions) {
+    insertQuestion.run(shotId, question);
+  }
+
+  // Zero-question case: flow straight intake -> running -> done.
+  if (session.questions.length === 0) {
+    runShot(shotId);
+  }
+
+  return getDashboard();
+}
+
+// Runs the resumable session to completion (specs §1.1). Auto-triggered, not
+// a manual button. Synchronous for the simulated adapter; a real async adapter
+// would leave the shot in 'running' and complete it on its own callback.
+function runShot(id) {
+  const shot = db.prepare('SELECT * FROM shots WHERE id = ?').get(id);
+  if (!shot) {
+    throw new Error('Shot not found.');
+  }
+  if (shot.status === 'done') {
+    throw new Error('Completed shots are locked.');
+  }
+
+  db.prepare("UPDATE shots SET status = 'running' WHERE id = ?").run(id);
+  db.prepare(`
+    INSERT INTO messages (shot_id, role, body)
+    VALUES (?, 'assistant', ?)
+  `).run(id, 'Run started. The workspace is locked into one-shot mode until completion.');
+
+  const provider = findProvider(shot.runner_provider);
+  const adapter = getAdapter(shot.runner_provider);
+  const answers = db.prepare('SELECT question, answer FROM clarifying_questions WHERE shot_id = ?').all(id);
+  adapter.answer(shot.session_id, answers);
+  const outcome = adapter.run(shot.session_id, {
+    brief: shot.prompt,
+    answers,
+    workspace: shot.workspace,
+    providerName: provider?.name
+  });
+
+  db.prepare(`
+    UPDATE shots
+    SET status = 'done',
+      result_summary = ?,
+      result_artifact = ?,
+      completed_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(outcome.summary, outcome.artifact || `outputs/shot-${id}`, id);
+  db.prepare(`
+    INSERT INTO messages (shot_id, role, body)
+    VALUES (?, 'assistant', ?)
+  `).run(id, 'Done. This shot is now locked; follow-up refinement belongs in a new shot or an external workspace.');
+}
+
+// Submitting the answered intake batch auto-triggers the run (specs §1.1).
+export function submitAnswers(id) {
+  const shot = db.prepare('SELECT * FROM shots WHERE id = ?').get(id);
+  if (!shot) {
+    throw new Error('Shot not found.');
+  }
+  if (shot.status === 'done') {
+    throw new Error('Completed shots are locked.');
+  }
+  if (shot.status === 'running') {
+    throw new Error('This shot is already running.');
+  }
+  const unanswered = getQuestions(shot.id).filter((question) => !String(question.answer || '').trim());
+  if (unanswered.length) {
+    throw new Error('Answer all clarifying questions before the run starts.');
+  }
+  runShot(id);
   return getDashboard();
 }
 
