@@ -43,6 +43,25 @@ function upsertEnv(values) {
   writeFileSync(envPath, `${lines.join('\n').replace(/\n*$/, '')}\n`);
 }
 
+function removeEnv(keysToRemove) {
+  const keys = new Set(keysToRemove);
+  const existing = existsSync(envPath) ? readFileSync(envPath, 'utf8').split(/\r?\n/) : [];
+  const lines = existing.filter((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
+      return true;
+    }
+    const [key] = trimmed.split('=');
+    return !keys.has(key);
+  });
+
+  for (const key of keys) {
+    delete process.env[key];
+  }
+
+  writeFileSync(envPath, `${lines.join('\n').replace(/\n*$/, '')}\n`);
+}
+
 const fallbackItems = [
   {
     kind: 'youtube',
@@ -95,6 +114,11 @@ export function configureBrightData({ token, mcpUrl }) {
     BRIGHT_DATA_API_TOKEN: cleanToken,
     BRIGHT_DATA_MCP_URL: cleanMcpUrl
   });
+  return getDiscoveryStatus();
+}
+
+export function clearBrightDataConfig() {
+  removeEnv(['BRIGHT_DATA_API_TOKEN', 'BRIGHT_DATA_MCP_URL']);
   return getDiscoveryStatus();
 }
 

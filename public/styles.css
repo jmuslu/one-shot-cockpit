@@ -442,7 +442,7 @@ button {
 
 .bright-data-setup {
   display: grid;
-  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 1fr) minmax(220px, 1fr) auto;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(170px, 1fr) minmax(220px, 1fr) auto auto;
   gap: 10px;
   align-items: end;
   padding: 12px;
@@ -462,6 +462,22 @@ button {
   color: var(--accent);
   font-size: 12px;
   font-weight: 900;
+}
+
+.save-chip {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eceff3;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.save-chip.saved {
+  background: #ddf2e7;
+  color: #167150;
 }
 
 .game-status {

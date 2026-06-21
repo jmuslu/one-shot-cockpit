@@ -97,6 +97,7 @@
           <div>
             <strong>Bring your own Bright Data token</strong>
             <p class="subtle">Paste a local API token to unlock connected Reddit, YouTube, search, and browsing discovery. The token is saved only to this machine's .env file.</p>
+            <span class="save-chip" id="brightDataSavedState">Not saved yet</span>
           </div>
           <label>
             API token
@@ -107,6 +108,7 @@
             <input name="mcpUrl" value="https://mcp.brightdata.com/mcp">
           </label>
           <button class="primary" type="submit">Connect token</button>
+          <button class="secondary" type="button" id="clearBrightData">Clear saved token</button>
           <div class="setup-message" id="brightDataMessage"></div>
         </form>
         <div class="integration-grid" id="integrationGrid"></div>

@@ -495,6 +495,9 @@ function renderMemory(items) {
 
 function renderIntegrations() {
   const discovery = state.integrations?.discovery || {};
+  $('#brightDataSavedState').textContent = discovery.configured ? 'Saved locally' : 'Not saved yet';
+  $('#brightDataSavedState').classList.toggle('saved', Boolean(discovery.configured));
+  $('#clearBrightData').disabled = !discovery.configured;
   const cards = [
     {
       name: 'Default Mode',
@@ -659,6 +662,16 @@ $('#brightDataForm').addEventListener('submit', async (event) => {
     $('#brightDataMessage').textContent = error.message;
     playSound('hype');
   }
+});
+
+$('#clearBrightData').addEventListener('click', async () => {
+  $('#brightDataMessage').textContent = 'Clearing local token...';
+  state.integrations = await request('/api/integrations/bright-data', { method: 'DELETE' });
+  $('#brightDataForm').reset();
+  $('#brightDataForm').elements.mcpUrl.value = 'https://mcp.brightdata.com/mcp';
+  $('#brightDataMessage').textContent = 'Local token cleared. Discovery is back in fallback mode.';
+  playSound('select');
+  render();
 });
 
 document.body.addEventListener('click', async (event) => {
