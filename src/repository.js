@@ -40,10 +40,17 @@ export function getDashboard() {
     ORDER BY created_at DESC
   `).all();
 
+  const settings = Object.fromEntries(db.prepare(`
+    SELECT key, value FROM settings
+  `).all().map((setting) => [setting.key, setting.value]));
+
   return {
     shots,
     entertainment,
     memory,
+    settings: {
+      onboardingComplete: settings.onboardingComplete === 'true'
+    },
     stats: {
       running: shots.filter((shot) => shot.status === 'running').length,
       intake: shots.filter((shot) => shot.status === 'intake').length,
@@ -51,6 +58,18 @@ export function getDashboard() {
       queuedEntertainment: entertainment.filter((item) => item.status === 'queued').length
     }
   };
+}
+
+export function updateSetting(key, value) {
+  db.prepare(`
+    INSERT INTO settings (key, value, updated_at)
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(String(key), String(value));
+
+  return getDashboard();
 }
 
 export function createShot(input) {

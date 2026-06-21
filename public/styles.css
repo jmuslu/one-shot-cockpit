@@ -105,6 +105,7 @@ textarea {
 }
 
 .hero,
+.onboarding,
 .surface {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -118,6 +119,27 @@ textarea {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
+}
+
+.onboarding {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-color: rgba(35, 100, 170, 0.28);
+  background: #f8fbff;
+}
+
+.onboarding[hidden] {
+  display: none;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 h2,
@@ -303,6 +325,17 @@ button {
   color: var(--ink);
 }
 
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  padding: 10px 13px;
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .small-button {
   min-width: 54px;
   padding: 8px 10px;
@@ -482,6 +515,34 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.integration-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.integration-card {
+  min-height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 13px;
+  background: #fbfaf5;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.integration-card strong {
+  font-size: 15px;
+}
+
+.integration-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .memory {
   display: grid;
   gap: 7px;
@@ -514,7 +575,9 @@ button {
 
   .active-grid,
   .hero,
+  .onboarding,
   .shot-form,
+  .integration-grid,
   .memory-grid {
     grid-template-columns: 1fr;
   }

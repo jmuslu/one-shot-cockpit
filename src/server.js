@@ -11,7 +11,8 @@ import {
   completeShot,
   createShot,
   getDashboard,
-  startShot
+  startShot,
+  updateSetting
 } from './repository.js';
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -78,6 +79,11 @@ async function handleApi(req, res, url) {
         ...addEntertainmentItems(result.items),
         discovery: result.status
       });
+    }
+
+    if (req.method === 'PATCH' && url.pathname === '/api/settings') {
+      const body = await readJson(req);
+      return sendJson(res, 200, updateSetting(body.key, body.value));
     }
 
     return sendJson(res, 404, { error: 'Not found.' });

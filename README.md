@@ -43,6 +43,29 @@ This is not a general chat app. The goal is a "one-shot project cockpit":
 6. The result locks inside this interface.
 7. Follow-up work happens as a new shot or in an external workspace.
 
+## Onboarding Boundary
+
+The app should feel alive out of the box, then become more powerful when users connect services.
+
+Out of the box:
+
+- Local dashboard
+- SQLite state
+- Mock one-shot completion
+- Manual entertainment queue
+- Generated UI sounds
+- Fallback discovery links
+
+User-configured:
+
+- Bright Data MCP for live public discovery
+- LLM provider or external runner for real builds
+- Browser notification permission
+- User-provided sound packs
+- Personal interests and login-backed browsing
+
+The UI includes a first-run setup banner and an Integrations section to make this boundary explicit.
+
 ## Planned Integrations
 
 - Direct LLM runner

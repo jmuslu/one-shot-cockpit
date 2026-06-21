@@ -60,6 +60,12 @@ db.exec(`
     memory_type TEXT NOT NULL DEFAULT 'preference',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 const shotCount = db.prepare('SELECT COUNT(*) AS count FROM shots').get().count;

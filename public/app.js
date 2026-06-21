@@ -279,12 +279,57 @@ function renderMemory(items) {
   `).join('');
 }
 
+function renderIntegrations() {
+  const discovery = state.integrations?.discovery || {};
+  const cards = [
+    {
+      name: 'Default Mode',
+      status: 'included',
+      body: 'Local shots, mock runs, generated sounds, manual entertainment, and fallback links work immediately.'
+    },
+    {
+      name: 'Bright Data MCP',
+      status: discovery.configured ? 'connected' : 'configure',
+      body: discovery.configured ? 'Ready for real public web discovery.' : 'Add BRIGHT_DATA_API_TOKEN in .env to replace fallback discovery.'
+    },
+    {
+      name: 'AI Runner',
+      status: 'configure',
+      body: 'Add an LLM provider or delegate runner when you want real one-shot builds instead of mock completion.'
+    },
+    {
+      name: 'Notifications',
+      status: 'user permission',
+      body: 'Browser notifications should be requested only when a user enables completion pings.'
+    },
+    {
+      name: 'Sound Packs',
+      status: 'optional',
+      body: 'Generated sounds ship by default. User-provided clean-license packs can come later.'
+    }
+  ];
+
+  $('#integrationGrid').innerHTML = cards.map((card) => `
+    <article class="integration-card ${escapeHtml(card.status.replaceAll(' ', '-'))}">
+      <span class="pill">${escapeHtml(card.status)}</span>
+      <strong>${escapeHtml(card.name)}</strong>
+      <p>${escapeHtml(card.body)}</p>
+    </article>
+  `).join('');
+}
+
+function renderOnboarding() {
+  $('#onboarding').hidden = Boolean(state.dashboard.settings?.onboardingComplete);
+}
+
 function render() {
   renderStats(state.dashboard.stats);
   renderShotList(state.dashboard.shots);
   renderActiveShot();
   renderEntertainment(state.dashboard.entertainment);
   renderMemory(state.dashboard.memory);
+  renderIntegrations();
+  renderOnboarding();
   if (state.integrations?.discovery) {
     const discovery = state.integrations.discovery;
     $('#discoveryStatus').textContent = `${discovery.provider}: ${discovery.mode}`;
@@ -403,6 +448,15 @@ $('#soundToggle').addEventListener('click', () => {
   if (state.sound) {
     playSound('select');
   }
+});
+
+$('#dismissOnboarding').addEventListener('click', async () => {
+  state.dashboard = await request('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ key: 'onboardingComplete', value: 'true' })
+  });
+  playSound('select');
+  render();
 });
 
 document.body.addEventListener('submit', async (event) => {
