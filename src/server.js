@@ -3,8 +3,10 @@ import { createReadStream, existsSync } from 'node:fs';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { integrationPlan } from './connectors.js';
+import { discoverEntertainment, getDiscoveryStatus } from './discovery.js';
 import {
   addEntertainment,
+  addEntertainmentItems,
   answerQuestion,
   completeShot,
   createShot,
@@ -43,7 +45,7 @@ async function handleApi(req, res, url) {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/integrations') {
-      return sendJson(res, 200, integrationPlan);
+      return sendJson(res, 200, { ...integrationPlan, discovery: getDiscoveryStatus() });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/shots') {
@@ -68,6 +70,14 @@ async function handleApi(req, res, url) {
 
     if (req.method === 'POST' && url.pathname === '/api/entertainment') {
       return sendJson(res, 201, addEntertainment(await readJson(req)));
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/entertainment/discover') {
+      const result = await discoverEntertainment();
+      return sendJson(res, 201, {
+        ...addEntertainmentItems(result.items),
+        discovery: result.status
+      });
     }
 
     return sendJson(res, 404, { error: 'Not found.' });

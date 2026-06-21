@@ -65,6 +65,50 @@ The waiting-room panel should prefer same-page previews, but not every source al
 - Reddit and many normal web pages may block embedding; those show a calm fallback card with an external link.
 - Sound effects are generated with WebAudio rather than bundled from copyrighted meme packs.
 
+## Bright Data MCP
+
+Bright Data MCP is the intended discovery source for the entertainment layer. The app now has a discovery endpoint and fallback queue:
+
+```text
+POST /api/entertainment/discover
+```
+
+To configure Bright Data, copy `.env.example` to `.env` and set:
+
+```text
+BRIGHT_DATA_API_TOKEN=...
+BRIGHT_DATA_MCP_URL=https://mcp.brightdata.com/mcp
+```
+
+The official hosted setup is:
+
+```text
+https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN
+```
+
+The local setup is:
+
+```bash
+npx @brightdata/mcp
+```
+
+with:
+
+```text
+API_TOKEN=YOUR_BRIGHT_DATA_API_TOKEN
+```
+
+The next code step is binding Bright Data tools such as `search_engine` and `scrape_as_markdown` into the discovery route.
+
+## Sound Sources
+
+The app currently uses generated WebAudio effects. Good asset sources to evaluate for a user-provided sound pack:
+
+- Kenney UI Audio: CC0, 50 UI sounds.
+- ObsydianX Interface SFX Pack 1: CC0, 200+ interface sounds.
+- Pixabay UI/ding/success/meme sound searches: royalty-free, check each asset license before bundling.
+- Freesound: useful, but license varies per file; prefer CC0 assets.
+
 ## Notes
 
 The local SQLite database is generated under `data/` and intentionally ignored by git.

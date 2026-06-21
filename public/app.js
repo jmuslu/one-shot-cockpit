@@ -285,6 +285,10 @@ function render() {
   renderActiveShot();
   renderEntertainment(state.dashboard.entertainment);
   renderMemory(state.dashboard.memory);
+  if (state.integrations?.discovery) {
+    const discovery = state.integrations.discovery;
+    $('#discoveryStatus').textContent = `${discovery.provider}: ${discovery.mode}`;
+  }
 }
 
 async function load() {
@@ -331,6 +335,17 @@ $('#addGameButton').addEventListener('click', async () => {
   });
   state.activeEntertainmentId = state.dashboard.entertainment[0]?.id || null;
   playSound('select');
+  render();
+});
+
+$('#discoverButton').addEventListener('click', async () => {
+  const result = await request('/api/entertainment/discover', { method: 'POST' });
+  state.dashboard = result;
+  if (result.discovery) {
+    state.integrations.discovery = result.discovery;
+  }
+  state.activeEntertainmentId = state.dashboard.entertainment[0]?.id || null;
+  playSound('complete');
   render();
 });
 

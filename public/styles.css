@@ -303,6 +303,11 @@ button {
   color: var(--ink);
 }
 
+.small-button {
+  min-width: 54px;
+  padding: 8px 10px;
+}
+
 .full {
   width: 100%;
 }
@@ -370,6 +375,13 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #12161c;
+}
+
+.discovery-status {
+  margin-top: -6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .stage iframe {

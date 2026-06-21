@@ -159,3 +159,23 @@ export function addEntertainment(input) {
 
   return getDashboard();
 }
+
+export function addEntertainmentItems(items) {
+  const insert = db.prepare(`
+    INSERT INTO entertainment_items (kind, title, source, url, reason, linked_shot_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const item of items) {
+    insert.run(
+      String(item.kind || 'link').trim(),
+      String(item.title || 'Untitled item').trim(),
+      String(item.source || 'discovery').trim(),
+      String(item.url || '').trim(),
+      String(item.reason || '').trim(),
+      item.linked_shot_id || null
+    );
+  }
+
+  return getDashboard();
+}

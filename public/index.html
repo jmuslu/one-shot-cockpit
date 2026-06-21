@@ -49,8 +49,12 @@
               <p class="eyebrow">Waiting room</p>
               <h3>Entertainment feed</h3>
             </div>
-            <button id="addGameButton" class="icon-button" title="Add game roulette item" aria-label="Add game roulette item">+</button>
+            <div class="button-row">
+              <button id="discoverButton" class="secondary small-button" title="Pull discovery items" aria-label="Pull discovery items">Pull</button>
+              <button id="addGameButton" class="icon-button" title="Add game roulette item" aria-label="Add game roulette item">+</button>
+            </div>
           </div>
+          <div class="discovery-status" id="discoveryStatus">Discovery provider loading.</div>
           <div class="stage" id="entertainmentStage">
             <div class="stage-empty">
               Pick something from the feed.
