@@ -90,6 +90,30 @@ function noise(start, duration, gain) {
   source.stop(ctx.currentTime + start + duration + 0.02);
 }
 
+function filteredNoise(start, duration, gain, frequency, type = 'bandpass') {
+  if (!state.sound) {
+    return;
+  }
+  const ctx = audio();
+  const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * duration)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < data.length; index += 1) {
+    data[index] = Math.random() * 2 - 1;
+  }
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const amp = ctx.createGain();
+  filter.type = type;
+  filter.frequency.setValueAtTime(frequency, ctx.currentTime + start);
+  amp.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+  amp.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + start + 0.01);
+  amp.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
+  source.buffer = buffer;
+  source.connect(filter).connect(amp).connect(ctx.destination);
+  source.start(ctx.currentTime + start);
+  source.stop(ctx.currentTime + start + duration + 0.02);
+}
+
 function playSound(name) {
   if (!state.sound) {
     return;
@@ -115,10 +139,16 @@ function playSound(name) {
     return;
   }
   if (name === 'cash') {
-    tone(1174.66, 0, 0.06, 0.045, 'triangle');
-    tone(1567.98, 0.055, 0.08, 0.05, 'triangle');
-    tone(2093, 0.12, 0.14, 0.055, 'sine');
-    noise(0.02, 0.18, 0.035);
+    filteredNoise(0, 0.36, 0.09, 5200, 'highpass');
+    filteredNoise(0.06, 0.22, 0.08, 3200, 'bandpass');
+    tone(1567.98, 0, 0.07, 0.08, 'square');
+    tone(2093, 0.052, 0.09, 0.09, 'triangle');
+    tone(2637.02, 0.12, 0.1, 0.075, 'sine');
+    tone(1046.5, 0.17, 0.08, 0.07, 'square');
+    tone(1318.51, 0.23, 0.08, 0.07, 'triangle');
+    tone(1975.53, 0.29, 0.13, 0.08, 'sine');
+    tone(3135.96, 0.38, 0.18, 0.06, 'triangle');
+    filteredNoise(0.34, 0.18, 0.055, 7800, 'highpass');
     return;
   }
   if (name === 'hype') {

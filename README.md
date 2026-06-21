@@ -14,7 +14,7 @@ The key product rule is that completed shots do not become normal follow-up chat
 - Locked completed results
 - Waiting-room entertainment panel for Reddit, YouTube, and web-game roulette integrations
 - Same-page entertainment preview stage with external-link fallback for sources that block embedding
-- Native generated WebAudio feedback sounds for selection, run start, completion, ca-ching, hype hits, and optional intermittent stingers
+- Native generated WebAudio feedback sounds for selection, run start, completion, obnoxious casino-style ca-ching, hype hits, and optional intermittent stingers
 - Integration plan placeholders for direct AI, Codex/Claude delegation, Bright Data MCP, and game roulette
 
 ## Run Locally
