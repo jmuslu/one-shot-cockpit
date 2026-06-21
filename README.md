@@ -13,7 +13,7 @@ The key product rule is that completed shots do not become normal follow-up chat
 - Running/done states
 - Locked completed results
 - Waiting-room entertainment panel for Reddit, YouTube, and web-game roulette integrations
-- Same-page entertainment preview stage with external-link fallback for sources that block embedding
+- Separate same-page video and game stages with external-link fallback for sources that block embedding
 - Curated io-game roulette with Diep.io, Mope.io, Slither.io, Agar.io, Skribbl.io, Krunker.io, Shell Shockers, Zombs Royale, Smash Karts, and LOLBeans
 - Native generated WebAudio feedback sounds for selection, run start, completion, obnoxious casino-style ca-ching, hype hits, real recorded voice stingers, and optional intermittent stingers with adjustable frequency plus held-sound mode
 - Bundled Kenney Casino Audio chip clips as the physical coin/chip layer for ca-ching

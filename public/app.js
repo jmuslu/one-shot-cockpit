@@ -4,6 +4,8 @@ const state = {
   activeShotId: null,
   activeEntertainmentId: null,
   activeGame: null,
+  activeVideo: null,
+  queueExpanded: false,
   sound: true,
   audioContext: null,
   ambient: false,
@@ -50,8 +52,8 @@ function selectedEntertainment() {
   return state.dashboard?.entertainment.find((item) => item.id === state.activeEntertainmentId) || state.dashboard?.entertainment[0] || null;
 }
 
-function selectedStageItem() {
-  return state.activeGame || selectedEntertainment();
+function selectedVideo() {
+  return state.activeVideo || state.dashboard?.entertainment.find((item) => item.kind === 'youtube' || item.kind === 'web') || null;
 }
 
 function audio() {
@@ -421,16 +423,15 @@ function embedUrl(item) {
   return null;
 }
 
-function renderEntertainmentStage() {
-  const item = selectedStageItem();
+function renderStage(selector, item, emptyText) {
   if (!item) {
-    $('#entertainmentStage').innerHTML = '<div class="stage-empty">Pick something from the feed.</div>';
+    $(selector).innerHTML = `<div class="stage-empty">${emptyText}</div>`;
     return;
   }
 
   const src = embedUrl(item);
   if (src) {
-    $('#entertainmentStage').innerHTML = `
+    $(selector).innerHTML = `
       <iframe
         title="${escapeHtml(item.title)}"
         src="${escapeHtml(src)}"
@@ -439,13 +440,13 @@ function renderEntertainmentStage() {
         referrerpolicy="strict-origin-when-cross-origin"
       ></iframe>
       <div class="stage-note">
-        ${item.kind === 'game' ? 'If the game blocks embedding or shows a blank frame, open it externally.' : ''}
+        ${item.kind === 'game' ? 'If the game blocks embedding or shows a blank frame, open it externally.' : 'If this source blocks embedding, open it externally.'}
       </div>
     `;
     return;
   }
 
-  $('#entertainmentStage').innerHTML = `
+  $(selector).innerHTML = `
     <div class="stage-empty">
       <strong>${escapeHtml(item.title)}</strong>
       <span>${item.url ? 'This source resists embedding, so keep the app calm and open it beside the cockpit.' : 'This roulette item needs a playable URL from the picker.'}</span>
@@ -454,8 +455,20 @@ function renderEntertainmentStage() {
   `;
 }
 
+function renderEntertainmentStages() {
+  renderStage('#videoStage', selectedVideo(), 'Pull a video or select one from the queue.');
+  renderStage('#gameStage', state.activeGame, 'Pull an io game.');
+}
+
 function renderEntertainment(items) {
-  $('#entertainmentList').innerHTML = items.map((item) => `
+  const discoveryConnected = Boolean(state.integrations?.discovery?.configured);
+  const queueItems = state.queueExpanded ? items.slice(0, 16) : items.slice(0, 4);
+  $('#entertainmentList').classList.toggle('collapsed', !state.queueExpanded);
+  $('#queueToggle').textContent = state.queueExpanded ? 'Hide queue' : 'Show queue';
+  $('#queueSummary').textContent = discoveryConnected
+    ? `${items.length} discovered items. Queue ${state.queueExpanded ? 'expanded' : 'collapsed'}.`
+    : 'Queue is collapsed until Bright Data MCP is connected. Fallback pulls preview directly in the stage.';
+  $('#entertainmentList').innerHTML = queueItems.map((item) => `
     <article class="fun-card ${item.id === state.activeEntertainmentId ? 'active' : ''}" data-entertainment="${item.id}">
       <div class="fun-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</div>
       <strong>${escapeHtml(item.title)}</strong>
@@ -467,7 +480,7 @@ function renderEntertainment(items) {
       </div>
     </article>
   `).join('');
-  renderEntertainmentStage();
+  renderEntertainmentStages();
 }
 
 function renderMemory(items) {
@@ -602,8 +615,23 @@ $('#discoverButton').addEventListener('click', async () => {
   if (result.discovery) {
     state.integrations.discovery = result.discovery;
   }
-  state.activeEntertainmentId = state.dashboard.entertainment[0]?.id || null;
+  const preview = result.previewItems?.find((item) => item.kind === 'youtube' || item.kind === 'web') || result.previewItems?.[0];
+  if (preview) {
+    state.activeVideo = {
+      id: 'video-preview',
+      ...preview
+    };
+  } else {
+    state.activeVideo = state.dashboard.entertainment.find((item) => item.kind === 'youtube' || item.kind === 'web') || null;
+  }
+  state.activeEntertainmentId = state.activeVideo?.id && state.activeVideo.id !== 'video-preview' ? state.activeVideo.id : state.dashboard.entertainment[0]?.id || null;
   playSound('complete');
+  render();
+});
+
+$('#queueToggle').addEventListener('click', () => {
+  state.queueExpanded = !state.queueExpanded;
+  playSound('select');
   render();
 });
 
@@ -622,8 +650,13 @@ document.body.addEventListener('click', async (event) => {
 
   const entertainment = event.target.closest('[data-entertainment]')?.dataset.entertainment;
   if (entertainment) {
-    state.activeGame = null;
     state.activeEntertainmentId = Number(entertainment);
+    const item = selectedEntertainment();
+    if (item?.kind === 'game') {
+      state.activeGame = item;
+    } else {
+      state.activeVideo = item;
+    }
     playSound('select');
     render();
     return;
