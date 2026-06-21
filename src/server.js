@@ -11,7 +11,9 @@ import {
   completeShot,
   connectRunner,
   createShot,
+  deleteShot,
   disconnectRunner,
+  discontinueShot,
   getDashboard,
   getRunners,
   getSetting,
@@ -85,6 +87,16 @@ async function handleApi(req, res, url) {
     const submitMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/submit$/);
     if (req.method === 'POST' && submitMatch) {
       return sendJson(res, 200, submitAnswers(Number(submitMatch[1])));
+    }
+
+    const discontinueMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/discontinue$/);
+    if (req.method === 'POST' && discontinueMatch) {
+      return sendJson(res, 200, discontinueShot(Number(discontinueMatch[1])));
+    }
+
+    const deleteMatch = url.pathname.match(/^\/api\/shots\/(\d+)$/);
+    if (req.method === 'DELETE' && deleteMatch) {
+      return sendJson(res, 200, deleteShot(Number(deleteMatch[1])));
     }
 
     const startMatch = url.pathname.match(/^\/api\/shots\/(\d+)\/start$/);

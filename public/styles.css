@@ -417,6 +417,21 @@ button {
   gap: 10px;
 }
 
+.danger {
+  background: #ffe6df;
+  color: #9d2e1e;
+}
+
+.shot-cleanup {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
 .pill {
   display: inline-flex;
   width: fit-content;
@@ -445,6 +460,11 @@ button {
 .pill.done {
   color: var(--done);
   border-color: rgba(82, 88, 102, 0.25);
+}
+
+.pill.discontinued {
+  color: #9d2e1e;
+  border-color: rgba(157, 46, 30, 0.25);
 }
 
 .entertainment {

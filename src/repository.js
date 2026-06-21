@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
@@ -309,7 +309,7 @@ export function submitAnswers(id) {
   if (!shot) {
     throw new Error('Shot not found.');
   }
-  if (shot.status === 'done') {
+  if (shot.status === 'done' || shot.status === 'discontinued') {
     throw new Error('Completed shots are locked.');
   }
   if (shot.status === 'running') {
@@ -323,6 +323,51 @@ export function submitAnswers(id) {
     throw new Error('The prep graph is not ready yet.');
   }
   runShot(id);
+  return getDashboard();
+}
+
+// Soft cleanup: stop an intake/running shot but keep it for reference.
+export function discontinueShot(id) {
+  const shot = db.prepare('SELECT * FROM shots WHERE id = ?').get(id);
+  if (!shot) {
+    throw new Error('Shot not found.');
+  }
+  if (shot.status === 'done') {
+    throw new Error('Done shots are locked. Delete the shot if you want it gone.');
+  }
+  if (shot.status === 'discontinued') {
+    return getDashboard();
+  }
+  db.prepare(`
+    UPDATE shots
+    SET status = 'discontinued',
+      result_summary = CASE
+        WHEN result_summary = '' THEN 'Discontinued by the user before completion.'
+        ELSE result_summary
+      END,
+      completed_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(id);
+  db.prepare(`
+    INSERT INTO messages (shot_id, role, body)
+    VALUES (?, 'assistant', ?)
+  `).run(id, 'Discontinued. This chat is kept for reference but will not continue running.');
+
+  return getDashboard();
+}
+
+// Hard cleanup: remove the shot (cascades to messages/questions/graph) and its
+// local output folder. Returns the fresh dashboard so the stat boxes update.
+export function deleteShot(id) {
+  const shot = db.prepare('SELECT * FROM shots WHERE id = ?').get(id);
+  if (!shot) {
+    throw new Error('Shot not found.');
+  }
+  db.prepare('DELETE FROM shots WHERE id = ?').run(id);
+  if (shot.workspace) {
+    rmSync(join(rootDir, shot.workspace), { recursive: true, force: true });
+  }
+
   return getDashboard();
 }
 
