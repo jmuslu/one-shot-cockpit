@@ -521,6 +521,22 @@ button {
   gap: 10px;
 }
 
+.frequency-control {
+  grid-template-columns: 180px minmax(160px, 1fr) 110px;
+  align-items: center;
+  gap: 12px;
+}
+
+.frequency-control input {
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.frequency-control span {
+  color: var(--ink);
+  font-weight: 900;
+}
+
 .sound-pad {
   min-height: 92px;
   border: 1px solid var(--line);
@@ -629,7 +645,8 @@ button {
 
   .stats,
   .shot-list,
-  .inline-question {
+  .inline-question,
+  .frequency-control {
     grid-template-columns: 1fr;
   }
 }

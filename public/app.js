@@ -7,6 +7,7 @@ const state = {
   audioContext: null,
   ambient: false,
   ambientTimer: null,
+  ambientFrequency: Number(localStorage.getItem('ambientFrequency') || 2),
   casinoSamples: []
 };
 
@@ -213,11 +214,29 @@ function scheduleAmbient() {
   if (!state.ambient || !state.sound) {
     return;
   }
-  const delay = 9000 + Math.random() * 16000;
+  const ranges = {
+    1: [22000, 42000],
+    2: [12000, 26000],
+    3: [7000, 15000],
+    4: [3500, 8500],
+    5: [1200, 3600]
+  };
+  const [min, max] = ranges[state.ambientFrequency] || ranges[2];
+  const delay = min + Math.random() * (max - min);
   state.ambientTimer = window.setTimeout(() => {
     playSound('ambient');
     scheduleAmbient();
   }, delay);
+}
+
+function frequencyLabel(value) {
+  return {
+    1: 'Rare',
+    2: 'Normal',
+    3: 'Busy',
+    4: 'Casino floor',
+    5: 'Unhinged'
+  }[value] || 'Normal';
 }
 
 function pill(status) {
@@ -463,6 +482,8 @@ function render() {
     const discovery = state.integrations.discovery;
     $('#discoveryStatus').textContent = `${discovery.provider}: ${discovery.mode}`;
   }
+  $('#ambientFrequency').value = state.ambientFrequency;
+  $('#ambientFrequencyLabel').textContent = frequencyLabel(state.ambientFrequency);
 }
 
 async function load() {
@@ -586,6 +607,16 @@ $('#ambientToggle').addEventListener('click', () => {
   $('#ambientToggle').classList.toggle('active', state.ambient);
   playSound(state.ambient ? 'cash' : 'select');
   scheduleAmbient();
+});
+
+$('#ambientFrequency').addEventListener('input', (event) => {
+  state.ambientFrequency = Number(event.target.value);
+  localStorage.setItem('ambientFrequency', String(state.ambientFrequency));
+  $('#ambientFrequencyLabel').textContent = frequencyLabel(state.ambientFrequency);
+  if (state.ambient) {
+    playSound('select');
+    scheduleAmbient();
+  }
 });
 
 document.body.addEventListener('click', (event) => {
