@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>One-Shot Cockpit</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <aside class="rail">
+      <div class="brand">
+        <p class="eyebrow">Local harness</p>
+        <h1>One-Shot Cockpit</h1>
+      </div>
+      <button id="newShotButton" class="primary full">New shot</button>
+      <div class="shot-list" id="shotList"></div>
+      <div class="rail-note">
+        Finished shots lock. Refinement starts elsewhere.
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Project run</p>
+          <h2 id="activeTitle">Select a shot</h2>
+          <p id="activePrompt" class="subtle">Create a one-shot project, answer only the questions that matter, then let the run finish.</p>
+        </div>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="active-grid">
+        <div class="surface">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Chat</p>
+              <h3>Intake and result</h3>
+            </div>
+            <span id="lockPill" class="pill">No shot</span>
+          </div>
+          <div class="messages" id="messages"></div>
+          <div id="questionBox" class="question-box"></div>
+          <div class="actions" id="shotActions"></div>
+        </div>
+
+        <aside class="surface entertainment">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Waiting room</p>
+              <h3>Entertainment feed</h3>
+            </div>
+            <button id="addGameButton" class="icon-button" title="Add game roulette item" aria-label="Add game roulette item">+</button>
+          </div>
+          <div class="entertainment-list" id="entertainmentList"></div>
+        </aside>
+      </section>
+
+      <section class="surface">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">New shot</p>
+            <h3>Prompt once, then let it run</h3>
+          </div>
+        </div>
+        <form id="shotForm" class="shot-form">
+          <label>
+            Project name
+            <input name="title" required placeholder="small portfolio, browser toy, landing page">
+          </label>
+          <label>
+            One-shot brief
+            <textarea name="prompt" rows="5" required placeholder="Describe what done means. The runner may ask a few clarifying questions, then it should build without turning this into a long chat."></textarea>
+          </label>
+          <label>
+            Runner
+            <select name="model">
+              <option value="direct-ai">Direct AI integration</option>
+              <option value="codex-delegate">Codex delegate</option>
+              <option value="claude-delegate">Claude Code delegate</option>
+              <option value="zeroclaw">ZeroClaw daemon</option>
+            </select>
+          </label>
+          <button type="submit" class="primary">Create shot</button>
+        </form>
+      </section>
+
+      <section class="surface">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Rules</p>
+            <h3>Product memory</h3>
+          </div>
+        </div>
+        <div class="memory-grid" id="memoryGrid"></div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "one-shot-cockpit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-sqlite src/server.js",
+    "dev": "node --experimental-sqlite --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
