@@ -7,6 +7,8 @@ const state = {
   audioContext: null,
   ambient: false,
   ambientTimer: null,
+  holdTimer: null,
+  heldSound: localStorage.getItem('heldSound') || 'random',
   ambientFrequency: Number(localStorage.getItem('ambientFrequency') || 2),
   casinoSamples: []
 };
@@ -215,18 +217,26 @@ function scheduleAmbient() {
     return;
   }
   const ranges = {
-    1: [22000, 42000],
-    2: [12000, 26000],
-    3: [7000, 15000],
-    4: [3500, 8500],
-    5: [1200, 3600]
+    1: [30000, 65000],
+    2: [18000, 36000],
+    3: [9000, 19000],
+    4: [4500, 9500],
+    5: [1600, 4200]
   };
   const [min, max] = ranges[state.ambientFrequency] || ranges[2];
   const delay = min + Math.random() * (max - min);
   state.ambientTimer = window.setTimeout(() => {
-    playSound('ambient');
+    playSound(nextAmbientSound());
     scheduleAmbient();
   }, delay);
+}
+
+function nextAmbientSound() {
+  if (state.heldSound && state.heldSound !== 'random') {
+    return state.heldSound;
+  }
+  const pool = ['select', 'complete', 'cash', 'hype', 'ambient', 'cash'];
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function frequencyLabel(value) {
@@ -466,6 +476,14 @@ function renderIntegrations() {
   `).join('');
 }
 
+function renderSoundMode() {
+  const label = state.heldSound === 'random' ? 'random sounds' : `${state.heldSound} only`;
+  $('#heldSoundStatus').textContent = `Intermittent mode: ${label}`;
+  document.querySelectorAll('[data-sound-pad]').forEach((pad) => {
+    pad.classList.toggle('held', pad.dataset.soundPad === state.heldSound);
+  });
+}
+
 function renderOnboarding() {
   $('#onboarding').hidden = Boolean(state.dashboard.settings?.onboardingComplete);
 }
@@ -478,6 +496,7 @@ function render() {
   renderMemory(state.dashboard.memory);
   renderIntegrations();
   renderOnboarding();
+  renderSoundMode();
   if (state.integrations?.discovery) {
     const discovery = state.integrations.discovery;
     $('#discoveryStatus').textContent = `${discovery.provider}: ${discovery.mode}`;
@@ -624,7 +643,34 @@ document.body.addEventListener('click', (event) => {
   if (!sound) {
     return;
   }
+  if (sound === 'random') {
+    playSound('select');
+    return;
+  }
   playSound(sound);
+});
+
+document.body.addEventListener('pointerdown', (event) => {
+  const pad = event.target.closest('[data-sound-pad]');
+  if (!pad) {
+    return;
+  }
+  window.clearTimeout(state.holdTimer);
+  state.holdTimer = window.setTimeout(() => {
+    state.heldSound = pad.dataset.soundPad;
+    localStorage.setItem('heldSound', state.heldSound);
+    playSound(state.heldSound === 'random' ? 'complete' : state.heldSound);
+    renderSoundMode();
+    scheduleAmbient();
+  }, 650);
+});
+
+document.body.addEventListener('pointerup', () => {
+  window.clearTimeout(state.holdTimer);
+});
+
+document.body.addEventListener('pointercancel', () => {
+  window.clearTimeout(state.holdTimer);
 });
 
 $('#dismissOnboarding').addEventListener('click', async () => {

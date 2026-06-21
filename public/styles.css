@@ -537,6 +537,13 @@ button {
   font-weight: 900;
 }
 
+.held-sound {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .sound-pad {
   min-height: 92px;
   border: 1px solid var(--line);
@@ -552,6 +559,11 @@ button {
 .sound-pad:hover {
   background: #24303b;
   transform: translateY(-1px);
+}
+
+.sound-pad.held {
+  outline: 2px solid rgba(255, 189, 46, 0.55);
+  background: #33260f;
 }
 
 .sound-pad span {
