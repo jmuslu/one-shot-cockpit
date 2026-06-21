@@ -82,13 +82,15 @@ db.exec(`
   );
 `);
 
-// Migration: delegate-to-runner columns (specs §2.4). Added idempotently so
-// existing databases pick up runner_provider / session_id / workspace.
+// Migration: delegate-to-runner columns (specs §2.4) + Spec-Kit columns. Added
+// idempotently so existing databases pick up the new shot columns.
 const shotColumns = new Set(db.prepare('PRAGMA table_info(shots)').all().map((column) => column.name));
 const shotMigrations = [
   ['runner_provider', "ALTER TABLE shots ADD COLUMN runner_provider TEXT NOT NULL DEFAULT ''"],
   ['session_id', "ALTER TABLE shots ADD COLUMN session_id TEXT NOT NULL DEFAULT ''"],
-  ['workspace', "ALTER TABLE shots ADD COLUMN workspace TEXT NOT NULL DEFAULT ''"]
+  ['workspace', "ALTER TABLE shots ADD COLUMN workspace TEXT NOT NULL DEFAULT ''"],
+  ['phase', "ALTER TABLE shots ADD COLUMN phase TEXT NOT NULL DEFAULT 'brief'"],
+  ['spec_dir', "ALTER TABLE shots ADD COLUMN spec_dir TEXT NOT NULL DEFAULT ''"]
 ];
 for (const [name, ddl] of shotMigrations) {
   if (!shotColumns.has(name)) {
@@ -100,6 +102,18 @@ const questionColumns = new Set(db.prepare('PRAGMA table_info(clarifying_questio
 if (!questionColumns.has('graph_key')) {
   db.exec("ALTER TABLE clarifying_questions ADD COLUMN graph_key TEXT NOT NULL DEFAULT ''");
 }
+
+// Spec-Kit artifacts produced by a run.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS artifacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shot_id INTEGER NOT NULL REFERENCES shots(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+`);
 
 const shotCount = db.prepare('SELECT COUNT(*) AS count FROM shots').get().count;
 

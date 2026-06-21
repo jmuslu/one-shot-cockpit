@@ -411,6 +411,33 @@ function renderActions(shot) {
     `;
     return;
   }
+  // Spec-Kit workflow: phase-based autonomous pipeline (Run / Continue).
+  if (shot.workflow === 'speckit') {
+    if (shot.status === 'running') {
+      $('#shotActions').innerHTML = `
+        <span class="pill running">Running…</span>
+        <span class="subtle">Spec-Kit is driving Claude Code: specify → plan → tasks → implement.</span>
+        ${cleanup}
+      `;
+      return;
+    }
+    if (shot.phase === 'specify') {
+      $('#shotActions').innerHTML = `
+        <button class="primary" data-continue-shot="${shot.id}">Continue run</button>
+        <span class="subtle">Answer the open questions above, then continue the run.</span>
+        ${cleanup}
+      `;
+      return;
+    }
+    $('#shotActions').innerHTML = `
+      <button class="primary" data-run-shot="${shot.id}">Run one-shot</button>
+      <span class="subtle">Spec-Kit plans and builds it; it only asks if something is genuinely blocking.</span>
+      ${cleanup}
+    `;
+    return;
+  }
+
+  // Prep-graph workflow (default): clarifying questions then the agnostic agent loop.
   if (shot.status === 'running') {
     $('#shotActions').innerHTML = `
       <span class="subtle">Run in progress. The runner notifies you when done.</span>
@@ -849,9 +876,25 @@ document.body.addEventListener('click', async (event) => {
     return;
   }
 
+  const runShot = event.target.dataset.runShot;
+  if (runShot) {
+    state.dashboard = await request(`/api/shots/${runShot}/run`, { method: 'POST' });
+    playSound('start');
+    render();
+    return;
+  }
+
   const startShot = event.target.dataset.startShot;
   if (startShot) {
     state.dashboard = await request(`/api/shots/${startShot}/start`, { method: 'POST' });
+    playSound('start');
+    render();
+    return;
+  }
+
+  const continueShot = event.target.dataset.continueShot;
+  if (continueShot) {
+    state.dashboard = await request(`/api/shots/${continueShot}/continue`, { method: 'POST' });
     playSound('start');
     render();
     return;
