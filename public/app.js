@@ -301,8 +301,7 @@ function renderStats(stats) {
   $('#stats').innerHTML = [
     ['running', stats.running],
     ['intake', stats.intake],
-    ['done', stats.done],
-    ['discoveries', stats.queuedEntertainment]
+    ['done', stats.done]
   ].map(([label, value]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
 }
 
