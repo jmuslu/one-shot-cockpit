@@ -362,6 +362,29 @@ function renderQuestions(shot) {
   ].join('');
 }
 
+function renderPrepGraph(shot) {
+  const graph = shot?.graph || [];
+  if (!shot || graph.length === 0) {
+    $('#prepGraph').innerHTML = '';
+    return;
+  }
+  $('#prepGraph').innerHTML = `
+    <div class="graph-title">
+      <strong>One-shot prep graph</strong>
+      <span>${graph.filter((node) => node.status === 'confirmed' || node.status === 'inferred' || node.status === 'assumed').length}/${graph.length} nodes shaped</span>
+    </div>
+    <div class="graph-grid">
+      ${graph.map((node) => `
+        <article class="graph-node ${escapeHtml(node.status)}">
+          <span>${escapeHtml(node.label)}</span>
+          <strong>${escapeHtml(node.value || 'Needs input')}</strong>
+          <small>${escapeHtml(node.status)} / ${Math.round(Number(node.confidence || 0) * 100)}%</small>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderActions(shot) {
   if (!shot) {
     $('#shotActions').innerHTML = '';
@@ -404,6 +427,7 @@ function renderActiveShot() {
   $('#lockPill').className = shot ? `pill ${shot.status}` : 'pill';
   $('#lockPill').textContent = shot ? shot.status : 'No shot';
   renderMessages(shot);
+  renderPrepGraph(shot);
   renderQuestions(shot);
   renderActions(shot);
 }
@@ -568,7 +592,7 @@ function renderRunners() {
         <span class="pill">${provider.connected ? 'connected' : 'connect'}</span>
         <strong>${escapeHtml(provider.name)}</strong>
         <p>${escapeHtml(provider.tagline)}</p>
-        <div class="subtle">OAuth sign-in</div>
+        <div class="subtle">${escapeHtml(provider.authMode)} / ${provider.runtime?.commandAvailable ? 'command found' : 'command missing'}${provider.runtime?.canExecute ? ' / execution armed' : ''}</div>
         <div class="button-row">
           ${provider.connected
             ? `<button class="secondary" data-disconnect-runner="${escapeHtml(provider.id)}">Disconnect</button>`

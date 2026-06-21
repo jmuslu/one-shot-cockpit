@@ -132,3 +132,22 @@ shots:  + runner_provider TEXT    -- which agent ran this shot (replaces/extends
 
 Reserved for specs we add iteratively (intake heuristics, run progress/streaming,
 notifications, entertainment layer, Bright Data MCP binding, etc.).
+
+## 5. Prep graph dispatch 🟢
+
+The cockpit now treats chat as input to a lightweight prep graph, not as the
+builder chat itself. The graph is populated before dispatch and contains:
+
+- goal
+- audience
+- stack
+- scope
+- acceptance criteria
+- validation plan
+- export/artifact expectation
+
+Only missing or low-confidence graph nodes become visible clarifying questions.
+When the graph is ready, the runner receives a finalized `OneShotSpec` and should
+not ask follow-up questions. The default runner behavior writes a dispatch package
+to the shot workspace; local command execution is opt-in with
+`ONESHOT_RUNNER_EXECUTE=true`.

@@ -2,7 +2,8 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
-import { RUNNER_PROVIDERS, findProvider, getAdapter } from './runners.js';
+import { applyGraphAnswer, buildOneShotSpec, graphReady, inferPrepGraph, readinessQuestions } from './prepGraph.js';
+import { RUNNER_PROVIDERS, findProvider, getAdapter, providerRuntimeStatus } from './runners.js';
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -26,6 +27,51 @@ function getQuestions(shotId) {
   `).all(shotId);
 }
 
+function getGraph(shotId) {
+  return db.prepare(`
+    SELECT * FROM prep_graph_nodes
+    WHERE shot_id = ?
+    ORDER BY
+      CASE node_type
+        WHEN 'goal' THEN 0
+        WHEN 'audience' THEN 1
+        WHEN 'stack' THEN 2
+        WHEN 'scope' THEN 3
+        WHEN 'acceptance' THEN 4
+        WHEN 'validation' THEN 5
+        WHEN 'artifact' THEN 6
+        ELSE 7
+      END,
+      id ASC
+  `).all(shotId).map((node) => ({
+    ...node,
+    type: node.node_type
+  }));
+}
+
+function saveGraph(shotId, nodes) {
+  const upsert = db.prepare(`
+    INSERT INTO prep_graph_nodes (shot_id, node_type, label, value, status, confidence, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(shot_id, node_type) DO UPDATE SET
+      label = excluded.label,
+      value = excluded.value,
+      status = excluded.status,
+      confidence = excluded.confidence,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  for (const node of nodes) {
+    upsert.run(
+      shotId,
+      node.type || node.node_type,
+      node.label,
+      String(node.value || ''),
+      node.status,
+      Number(node.confidence || 0)
+    );
+  }
+}
+
 export function getDashboard() {
   const shots = db.prepare(`
     SELECT * FROM shots
@@ -35,7 +81,8 @@ export function getDashboard() {
   `).all().map((shot) => ({
     ...shot,
     messages: getMessages(shot.id),
-    questions: getQuestions(shot.id)
+    questions: getQuestions(shot.id),
+    graph: getGraph(shot.id)
   }));
 
   const entertainment = db.prepare(`
@@ -99,6 +146,7 @@ export function getRunners() {
       name: provider.name,
       authMode: provider.authMode,
       tagline: provider.tagline,
+      runtime: providerRuntimeStatus(provider),
       connected: getSetting(runnerConnectedKey(provider.id)) === 'true'
     }))
   };
@@ -109,9 +157,10 @@ export function connectRunner(id) {
   if (!provider) {
     throw new Error('Unknown runner provider.');
   }
-  // Stub for the provider's OAuth flow. A real adapter launches the provider
-  // sign-in; the provider persists its own token. We store only a non-secret
-  // connected status — never a token.
+  const runtime = providerRuntimeStatus(provider);
+  if (!runtime.commandAvailable) {
+    throw new Error(`${provider.name} command is not available on this machine yet.`);
+  }
   updateSetting(runnerConnectedKey(id), 'true');
   updateSetting('runner:selected', id);
   return getRunners();
@@ -152,11 +201,19 @@ export function createShot(input) {
     VALUES (?, 'user', ?)
   `).run(shotId, prompt);
 
-  // createShot starts the agent session (specs §1.1). The clarifying questions
-  // are real adapter output, not hardcoded.
   const workspace = `outputs/shot-${shotId}`;
   mkdirSync(join(rootDir, workspace), { recursive: true });
-  const session = getAdapter(provider.id).startSession(prompt, workspace);
+
+  const graph = inferPrepGraph({ title, prompt });
+  saveGraph(shotId, graph);
+  const questions = readinessQuestions(graph);
+  const session = getAdapter(provider.id).startSession({
+    title,
+    brief: prompt,
+    workspace,
+    graph,
+    ready: questions.length === 0
+  });
 
   db.prepare('UPDATE shots SET session_id = ?, workspace = ? WHERE id = ?')
     .run(String(session.sessionId), workspace, shotId);
@@ -166,21 +223,20 @@ export function createShot(input) {
     VALUES (?, 'assistant', ?)
   `).run(
     shotId,
-    session.questions.length
-      ? `${provider.name} session started. A few clarifying questions first.`
-      : `${provider.name} session started. No clarifying questions needed — running now.`
+    questions.length
+      ? `${provider.name} prep graph started. A few missing nodes need confirmation.`
+      : `${provider.name} prep graph is complete. Dispatching now.`
   );
 
   const insertQuestion = db.prepare(`
-    INSERT INTO clarifying_questions (shot_id, question, answer)
-    VALUES (?, ?, '')
+    INSERT INTO clarifying_questions (shot_id, graph_key, question, answer)
+    VALUES (?, ?, ?, '')
   `);
-  for (const question of session.questions) {
-    insertQuestion.run(shotId, question);
+  for (const item of questions) {
+    insertQuestion.run(shotId, item.graphKey, item.question);
   }
 
-  // Zero-question case: flow straight intake -> running -> done.
-  if (session.questions.length === 0) {
+  if (questions.length === 0) {
     runShot(shotId);
   }
 
@@ -208,8 +264,12 @@ function runShot(id) {
   const provider = findProvider(shot.runner_provider);
   const adapter = getAdapter(shot.runner_provider);
   const answers = db.prepare('SELECT question, answer FROM clarifying_questions WHERE shot_id = ?').all(id);
-  adapter.answer(shot.session_id, answers);
+  const graph = getGraph(id);
+  const spec = buildOneShotSpec(shot, graph, answers);
+  adapter.answer(shot.session_id, answers, spec);
   const outcome = adapter.run(shot.session_id, {
+    providerId: shot.runner_provider,
+    spec,
     brief: shot.prompt,
     answers,
     workspace: shot.workspace,
@@ -245,6 +305,9 @@ export function submitAnswers(id) {
   const unanswered = getQuestions(shot.id).filter((question) => !String(question.answer || '').trim());
   if (unanswered.length) {
     throw new Error('Answer all clarifying questions before the run starts.');
+  }
+  if (!graphReady(getGraph(shot.id))) {
+    throw new Error('The prep graph is not ready yet.');
   }
   runShot(id);
   return getDashboard();
@@ -311,6 +374,11 @@ export function answerQuestion(id, questionId, answer) {
     SET answer = ?
     WHERE id = ? AND shot_id = ?
   `).run(String(answer || '').trim(), questionId, id);
+
+  const question = db.prepare('SELECT graph_key FROM clarifying_questions WHERE id = ? AND shot_id = ?').get(questionId, id);
+  if (question?.graph_key) {
+    saveGraph(id, applyGraphAnswer(getGraph(id), question.graph_key, answer));
+  }
 
   return getDashboard();
 }

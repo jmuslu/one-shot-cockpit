@@ -127,6 +127,22 @@ API_TOKEN=YOUR_BRIGHT_DATA_API_TOKEN
 
 The next code step is binding Bright Data tools such as `search_engine` and `scrape_as_markdown` into the discovery route.
 
+## One-Shot Prep Graph
+
+Shots now build a lightweight project graph before runner dispatch. The graph captures goal, audience, stack, scope, acceptance criteria, validation, and export shape. Missing graph nodes become the only clarifying questions the user sees. Once the graph is ready, the app writes a dispatch package into the shot workspace:
+
+```text
+one-shot-spec.json
+runner-prompt.md
+runner-result.md
+```
+
+Codex dispatch uses the local `codex` CLI when present. By default the app exports the package without executing the runner. Set this locally to allow command execution:
+
+```text
+ONESHOT_RUNNER_EXECUTE=true
+```
+
 ## Sound Sources
 
 The app uses generated WebAudio effects plus bundled Kenney Casino Audio chip clips for the ca-ching. Kenney Casino Audio is CC0 and the license is included at `public/sounds/casino/KENNEY_CASINO_AUDIO_LICENSE.txt`.

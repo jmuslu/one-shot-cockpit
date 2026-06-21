@@ -36,9 +36,23 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS clarifying_questions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shot_id INTEGER NOT NULL REFERENCES shots(id) ON DELETE CASCADE,
+    graph_key TEXT NOT NULL DEFAULT '',
     question TEXT NOT NULL,
     answer TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS prep_graph_nodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shot_id INTEGER NOT NULL REFERENCES shots(id) ON DELETE CASCADE,
+    node_type TEXT NOT NULL,
+    label TEXT NOT NULL,
+    value TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'inferred',
+    confidence REAL NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(shot_id, node_type)
   );
 
   CREATE TABLE IF NOT EXISTS entertainment_items (
@@ -80,6 +94,11 @@ for (const [name, ddl] of shotMigrations) {
   if (!shotColumns.has(name)) {
     db.exec(ddl);
   }
+}
+
+const questionColumns = new Set(db.prepare('PRAGMA table_info(clarifying_questions)').all().map((column) => column.name));
+if (!questionColumns.has('graph_key')) {
+  db.exec("ALTER TABLE clarifying_questions ADD COLUMN graph_key TEXT NOT NULL DEFAULT ''");
 }
 
 const shotCount = db.prepare('SELECT COUNT(*) AS count FROM shots').get().count;
