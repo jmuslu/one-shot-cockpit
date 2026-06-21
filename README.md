@@ -13,6 +13,8 @@ The key product rule is that completed shots do not become normal follow-up chat
 - Running/done states
 - Locked completed results
 - Waiting-room entertainment panel for Reddit, YouTube, and web-game roulette integrations
+- Same-page entertainment preview stage with external-link fallback for sources that block embedding
+- Generated WebAudio feedback sounds for selection, run start, and completion
 - Integration plan placeholders for direct AI, Codex/Claude delegation, Bright Data MCP, and game roulette
 
 ## Run Locally
@@ -48,6 +50,20 @@ This is not a general chat app. The goal is a "one-shot project cockpit":
 - Bright Data MCP for public Reddit, YouTube, search, and discovery feeds
 - Web-game roulette for lightweight browser games while waiting
 - Desktop/browser notifications when a shot completes
+
+## Collaboration Split
+
+- One-shot effectiveness research: identify what makes a prompt/run succeed in one pass, including intake patterns, project boundaries, evaluation criteria, and handoff format.
+- Entertainment layer: build the waiting-room surface, embedded previews, satisfying feedback, game roulette, and public-content discovery.
+
+## Entertainment Embeds
+
+The waiting-room panel should prefer same-page previews, but not every source allows iframe embedding. The current behavior is:
+
+- YouTube watch URLs are converted into embed URLs when possible.
+- Web/game URLs can load in the stage if the source permits it.
+- Reddit and many normal web pages may block embedding; those show a calm fallback card with an external link.
+- Sound effects are generated with WebAudio rather than bundled from copyrighted meme packs.
 
 ## Notes
 
