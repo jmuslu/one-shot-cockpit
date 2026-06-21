@@ -4,7 +4,9 @@ const state = {
   activeShotId: null,
   activeEntertainmentId: null,
   sound: true,
-  audioContext: null
+  audioContext: null,
+  ambient: false,
+  ambientTimer: null
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -64,6 +66,30 @@ function tone(frequency, start, duration, gain, type = 'sine') {
   osc.stop(ctx.currentTime + start + duration + 0.03);
 }
 
+function noise(start, duration, gain) {
+  if (!state.sound) {
+    return;
+  }
+  const ctx = audio();
+  const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * duration)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < data.length; index += 1) {
+    data[index] = Math.random() * 2 - 1;
+  }
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const amp = ctx.createGain();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(2200, ctx.currentTime + start);
+  amp.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+  amp.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + start + 0.01);
+  amp.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
+  source.buffer = buffer;
+  source.connect(filter).connect(amp).connect(ctx.destination);
+  source.start(ctx.currentTime + start);
+  source.stop(ctx.currentTime + start + duration + 0.02);
+}
+
 function playSound(name) {
   if (!state.sound) {
     return;
@@ -88,7 +114,45 @@ function playSound(name) {
     tone(330, 0.075, 0.12, 0.055, 'triangle');
     return;
   }
+  if (name === 'cash') {
+    tone(1174.66, 0, 0.06, 0.045, 'triangle');
+    tone(1567.98, 0.055, 0.08, 0.05, 'triangle');
+    tone(2093, 0.12, 0.14, 0.055, 'sine');
+    noise(0.02, 0.18, 0.035);
+    return;
+  }
+  if (name === 'hype') {
+    tone(146.83, 0, 0.18, 0.08, 'sawtooth');
+    tone(293.66, 0.02, 0.18, 0.055, 'square');
+    noise(0, 0.11, 0.045);
+    return;
+  }
+  if (name === 'ambient') {
+    const choice = Math.random();
+    if (choice < 0.34) {
+      tone(880, 0, 0.06, 0.025, 'sine');
+      tone(1174.66, 0.05, 0.08, 0.022, 'triangle');
+    } else if (choice < 0.67) {
+      noise(0, 0.08, 0.018);
+      tone(392, 0.04, 0.08, 0.02, 'triangle');
+    } else {
+      tone(659.25, 0, 0.05, 0.02, 'square');
+    }
+    return;
+  }
   tone(740, 0, 0.08, 0.05, 'sine');
+}
+
+function scheduleAmbient() {
+  window.clearTimeout(state.ambientTimer);
+  if (!state.ambient || !state.sound) {
+    return;
+  }
+  const delay = 9000 + Math.random() * 16000;
+  state.ambientTimer = window.setTimeout(() => {
+    playSound('ambient');
+    scheduleAmbient();
+  }, delay);
 }
 
 function pill(status) {
@@ -305,7 +369,7 @@ function renderIntegrations() {
     {
       name: 'Sound Packs',
       status: 'optional',
-      body: 'Generated sounds ship by default. User-provided clean-license packs can come later.'
+      body: 'Generated sounds ship by default as a native vibe layer. User-provided clean-license packs can come later.'
     }
   ];
 
@@ -448,6 +512,23 @@ $('#soundToggle').addEventListener('click', () => {
   if (state.sound) {
     playSound('select');
   }
+  scheduleAmbient();
+});
+
+$('#ambientToggle').addEventListener('click', () => {
+  state.ambient = !state.ambient;
+  $('#ambientToggle').textContent = state.ambient ? 'Intermittent on' : 'Intermittent off';
+  $('#ambientToggle').classList.toggle('active', state.ambient);
+  playSound(state.ambient ? 'cash' : 'select');
+  scheduleAmbient();
+});
+
+document.body.addEventListener('click', (event) => {
+  const sound = event.target.closest('[data-sound-pad]')?.dataset.soundPad;
+  if (!sound) {
+    return;
+  }
+  playSound(sound);
 });
 
 $('#dismissOnboarding').addEventListener('click', async () => {

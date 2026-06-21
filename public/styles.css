@@ -515,6 +515,40 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.sound-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sound-pad {
+  min-height: 92px;
+  border: 1px solid var(--line);
+  background: #171d24;
+  color: #f8f1e5;
+  text-align: left;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  transition: transform 130ms ease, background 130ms ease;
+}
+
+.sound-pad:hover {
+  background: #24303b;
+  transform: translateY(-1px);
+}
+
+.sound-pad span {
+  color: #bac5c0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#ambientToggle.active {
+  background: #d9f3df;
+  color: #16673b;
+}
+
 .integration-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -578,6 +612,7 @@ button {
   .onboarding,
   .shot-form,
   .integration-grid,
+  .sound-grid,
   .memory-grid {
     grid-template-columns: 1fr;
   }

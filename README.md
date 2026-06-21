@@ -14,7 +14,7 @@ The key product rule is that completed shots do not become normal follow-up chat
 - Locked completed results
 - Waiting-room entertainment panel for Reddit, YouTube, and web-game roulette integrations
 - Same-page entertainment preview stage with external-link fallback for sources that block embedding
-- Generated WebAudio feedback sounds for selection, run start, and completion
+- Native generated WebAudio feedback sounds for selection, run start, completion, ca-ching, hype hits, and optional intermittent stingers
 - Integration plan placeholders for direct AI, Codex/Claude delegation, Bright Data MCP, and game roulette
 
 ## Run Locally
@@ -86,7 +86,8 @@ The waiting-room panel should prefer same-page previews, but not every source al
 - YouTube watch URLs are converted into embed URLs when possible.
 - Web/game URLs can load in the stage if the source permits it.
 - Reddit and many normal web pages may block embedding; those show a calm fallback card with an external link.
-- Sound effects are generated with WebAudio rather than bundled from copyrighted meme packs.
+
+Entertainment cards are for browsable content: YouTube, Reddit, io games, and web links. Sounds and meme cues are native app controls in the Vibe Layer, not entertainment cards.
 
 ## Bright Data MCP
 
@@ -125,7 +126,7 @@ The next code step is binding Bright Data tools such as `search_engine` and `scr
 
 ## Sound Sources
 
-The app currently uses generated WebAudio effects. Good asset sources to evaluate for a user-provided sound pack:
+The app currently uses generated WebAudio effects, including a ca-ching and intermittent stingers. Good asset sources to evaluate for a user-provided sound pack:
 
 - Kenney UI Audio: CC0, 50 UI sounds.
 - ObsydianX Interface SFX Pack 1: CC0, 200+ interface sounds.
