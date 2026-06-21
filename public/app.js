@@ -2,6 +2,7 @@ const state = {
   dashboard: null,
   integrations: null,
   runners: null,
+  pollTimer: null,
   activeShotId: null,
   activeEntertainmentId: null,
   activeGame: null,
@@ -591,6 +592,28 @@ function renderOnboarding() {
   $('#onboarding').hidden = Boolean(state.dashboard.settings?.onboardingComplete);
 }
 
+function schedulePoll() {
+  window.clearTimeout(state.pollTimer);
+  const anyRunning = state.dashboard?.shots?.some((shot) => shot.status === 'running');
+  if (!anyRunning) {
+    return;
+  }
+  state.pollTimer = window.setTimeout(async () => {
+    const wasRunning = new Set(state.dashboard.shots.filter((shot) => shot.status === 'running').map((shot) => shot.id));
+    try {
+      state.dashboard = await request('/api/dashboard');
+    } catch {
+      schedulePoll();
+      return;
+    }
+    const justFinishedRunning = state.dashboard.shots.some((shot) => wasRunning.has(shot.id) && shot.status === 'done');
+    render();
+    if (justFinishedRunning) {
+      playSound('complete');
+    }
+  }, 3000);
+}
+
 function render() {
   renderStats(state.dashboard.stats);
   renderShotList(state.dashboard.shots);
@@ -609,6 +632,7 @@ function render() {
   }
   $('#ambientFrequency').value = state.ambientFrequency;
   $('#ambientFrequencyLabel').textContent = frequencyLabel(state.ambientFrequency);
+  schedulePoll();
 }
 
 async function load() {

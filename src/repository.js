@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
@@ -161,6 +161,16 @@ export function createShot(input) {
   db.prepare('UPDATE shots SET session_id = ?, workspace = ? WHERE id = ?')
     .run(String(session.sessionId), workspace, shotId);
 
+  // Seed the workspace with the brief so the build loop has an input file.
+  writeFileSync(
+    join(rootDir, workspace, 'prompt.md'),
+    `# ${title}\n\n`
+      + `- Runner: ${provider.name} (${provider.id})\n`
+      + `- Session: ${session.sessionId}\n`
+      + `- Workspace: ${workspace}\n\n`
+      + `## Brief\n\n${prompt}\n`
+  );
+
   db.prepare(`
     INSERT INTO messages (shot_id, role, body)
     VALUES (?, 'assistant', ?)
@@ -187,9 +197,9 @@ export function createShot(input) {
   return getDashboard();
 }
 
-// Runs the resumable session to completion (specs §1.1). Auto-triggered, not
-// a manual button. Synchronous for the simulated adapter; a real async adapter
-// would leave the shot in 'running' and complete it on its own callback.
+// Runs the agent loop to completion (specs §1.1). Auto-triggered, not a manual
+// button. The agent runs asynchronously: the shot sits in 'running' until the
+// agent process exits, then finalizeShot flips it to 'done'.
 function runShot(id) {
   const shot = db.prepare('SELECT * FROM shots WHERE id = ?').get(id);
   if (!shot) {
@@ -203,27 +213,46 @@ function runShot(id) {
   db.prepare(`
     INSERT INTO messages (shot_id, role, body)
     VALUES (?, 'assistant', ?)
-  `).run(id, 'Run started. The workspace is locked into one-shot mode until completion.');
+  `).run(id, 'Run started. The agent is building in the workspace until completion.');
 
   const provider = findProvider(shot.runner_provider);
   const adapter = getAdapter(shot.runner_provider);
   const answers = db.prepare('SELECT question, answer FROM clarifying_questions WHERE shot_id = ?').all(id);
+
+  // Write the clarifying answers into the workspace as build input.
+  const answered = answers.filter((item) => String(item.answer || '').trim());
+  if (shot.workspace && answered.length) {
+    writeFileSync(
+      join(rootDir, shot.workspace, 'answers.md'),
+      `# Clarifying answers\n\n${answered.map((item) => `**${item.question}**\n\n${item.answer}\n`).join('\n')}`
+    );
+  }
+
   adapter.answer(shot.session_id, answers);
-  const outcome = adapter.run(shot.session_id, {
+  Promise.resolve(adapter.run(shot.session_id, {
     brief: shot.prompt,
     answers,
     workspace: shot.workspace,
+    absWorkspace: shot.workspace ? join(rootDir, shot.workspace) : rootDir,
     providerName: provider?.name
-  });
+  }))
+    .then((outcome) => finalizeShot(id, outcome))
+    .catch((error) => finalizeShot(id, { summary: `Run failed: ${error.message}`, artifact: shot.workspace || '' }));
+}
 
-  db.prepare(`
+function finalizeShot(id, outcome) {
+  const result = db.prepare(`
     UPDATE shots
     SET status = 'done',
       result_summary = ?,
       result_artifact = ?,
       completed_at = CURRENT_TIMESTAMP
-    WHERE id = ?
+    WHERE id = ? AND status != 'done'
   `).run(outcome.summary, outcome.artifact || `outputs/shot-${id}`, id);
+
+  if (result.changes === 0) {
+    return;
+  }
   db.prepare(`
     INSERT INTO messages (shot_id, role, body)
     VALUES (?, 'assistant', ?)
