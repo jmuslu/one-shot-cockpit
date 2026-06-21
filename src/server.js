@@ -7,7 +7,6 @@ import { clearBrightDataConfig, configureBrightData, discoverEntertainment, getD
 import { ioGames, pickIoGame } from './games.js';
 import {
   addEntertainment,
-  addEntertainmentItems,
   answerQuestion,
   completeShot,
   createShot,
@@ -100,16 +99,10 @@ async function handleApi(req, res, url) {
 
     if (req.method === 'POST' && url.pathname === '/api/entertainment/discover') {
       const result = await discoverEntertainment();
-      if (!result.status.configured) {
-        return sendJson(res, 201, {
-          ...getDashboard(),
-          discovery: result.status,
-          previewItems: result.items
-        });
-      }
       return sendJson(res, 201, {
-        ...addEntertainmentItems(result.items),
-        discovery: result.status
+        ...getDashboard(),
+        discovery: result.status,
+        previewItems: result.items
       });
     }
 

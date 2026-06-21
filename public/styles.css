@@ -98,7 +98,7 @@ textarea {
 }
 
 .workspace {
-  width: min(1260px, 100%);
+  width: min(1540px, 100%);
   padding: 28px;
   display: grid;
   gap: 18px;
@@ -190,7 +190,7 @@ h3 {
 
 .active-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) minmax(480px, 620px);
   gap: 18px;
   align-items: start;
 }
@@ -404,7 +404,8 @@ button {
 
 .stage {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
+  min-height: 260px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -513,6 +514,13 @@ button {
   place-content: center;
   gap: 8px;
   text-align: center;
+}
+
+.stage-empty.compact {
+  min-height: auto;
+  padding: 12px;
+  color: var(--muted);
+  background: #f6f3ec;
 }
 
 .stage-empty span {

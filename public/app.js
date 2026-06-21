@@ -462,13 +462,19 @@ function renderEntertainmentStages() {
 
 function renderEntertainment(items) {
   const discoveryConnected = Boolean(state.integrations?.discovery?.configured);
-  const discoveryItems = state.discoveriesExpanded ? items.slice(0, 16) : items.slice(0, 4);
+  const stagedIds = new Set(
+    [state.activeVideo?.id, state.activeGame?.id, state.activeEntertainmentId]
+      .filter((id) => id !== null && id !== undefined && Number.isFinite(Number(id)))
+      .map(Number)
+  );
+  const extraItems = items.filter((item) => !stagedIds.has(item.id) && item.kind !== 'game');
+  const discoveryItems = state.discoveriesExpanded ? extraItems.slice(0, 16) : extraItems.slice(0, 4);
   $('#entertainmentList').classList.toggle('collapsed', !state.discoveriesExpanded);
   $('#discoveriesToggle').textContent = state.discoveriesExpanded ? 'Hide connected discoveries' : 'Show connected discoveries';
   $('#discoveriesSummary').textContent = discoveryConnected
-    ? `${items.length} connected discovery cards. ${state.discoveriesExpanded ? 'Expanded' : 'Collapsed'}.`
+    ? `${extraItems.length} extra discovery cards. Video and Game stay in the stages.`
     : 'Paste your Bright Data token in Integrations for full usage. Until then, Video and Game pull directly into the stages.';
-  $('#entertainmentList').innerHTML = discoveryItems.map((item) => `
+  $('#entertainmentList').innerHTML = discoveryItems.length ? discoveryItems.map((item) => `
     <article class="fun-card ${item.id === state.activeEntertainmentId ? 'active' : ''}" data-entertainment="${item.id}">
       <div class="fun-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</div>
       <strong>${escapeHtml(item.title)}</strong>
@@ -479,7 +485,7 @@ function renderEntertainment(items) {
         ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open</a>` : ''}
       </div>
     </article>
-  `).join('');
+  `).join('') : '<div class="stage-empty compact">No extra discoveries yet.</div>';
   renderEntertainmentStages();
 }
 
@@ -507,7 +513,7 @@ function renderIntegrations() {
     {
       name: 'Bright Data MCP',
       status: discovery.configured ? 'connected' : 'configure',
-      body: discovery.configured ? 'Token saved locally. Connected discovery handles Reddit, YouTube, web search, and browsing sources.' : 'Bring your own Bright Data token. No separate YouTube or Reddit integration needed.'
+      body: discovery.configured ? 'Token saved locally. Ready for live Reddit, YouTube, web search, and social discovery wiring.' : 'Bring your own Bright Data token. No separate YouTube or Reddit integration needed.'
     },
     {
       name: 'AI Runner',
