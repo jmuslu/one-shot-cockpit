@@ -391,16 +391,31 @@ function renderActions(shot) {
     $('#shotActions').innerHTML = '';
     return;
   }
+  const cleanup = `
+    <div class="shot-cleanup">
+      ${shot.status !== 'done' && shot.status !== 'discontinued' ? `<button class="secondary" data-discontinue-shot="${shot.id}">Discontinue</button>` : ''}
+      <button class="danger" data-delete-shot="${shot.id}">Delete chat</button>
+    </div>
+  `;
   if (shot.status === 'done') {
     $('#shotActions').innerHTML = `
       <button class="secondary" data-fork-shot="${shot.id}">Start refinement as new shot</button>
       <span class="subtle">Follow-up is intentionally disabled here.</span>
+      ${cleanup}
+    `;
+    return;
+  }
+  if (shot.status === 'discontinued') {
+    $('#shotActions').innerHTML = `
+      <span class="subtle">This chat was discontinued and will not continue running.</span>
+      ${cleanup}
     `;
     return;
   }
   if (shot.status === 'running') {
     $('#shotActions').innerHTML = `
       <span class="subtle">Run in progress. The runner notifies you when done.</span>
+      ${cleanup}
     `;
     return;
   }
@@ -409,11 +424,13 @@ function renderActions(shot) {
     $('#shotActions').innerHTML = `
       <button class="primary" data-submit-shot="${shot.id}">Submit answers & run</button>
       <span class="subtle">Submitting auto-triggers the one-shot run.</span>
+      ${cleanup}
     `;
     return;
   }
   $('#shotActions').innerHTML = `
     <span class="subtle">Answer the clarifying questions to auto-start the run.</span>
+    ${cleanup}
   `;
 }
 
@@ -845,6 +862,27 @@ document.body.addEventListener('click', async (event) => {
   if (completeShot) {
     state.dashboard = await request(`/api/shots/${completeShot}/complete`, { method: 'POST' });
     playSound('complete');
+    render();
+    return;
+  }
+
+  const discontinueShot = event.target.dataset.discontinueShot;
+  if (discontinueShot) {
+    state.dashboard = await request(`/api/shots/${discontinueShot}/discontinue`, { method: 'POST' });
+    playSound('select');
+    render();
+    return;
+  }
+
+  const deleteShot = event.target.dataset.deleteShot;
+  if (deleteShot) {
+    const shot = state.dashboard.shots.find((item) => item.id === Number(deleteShot));
+    if (!window.confirm(`Delete "${shot?.title || 'this chat'}"? This removes the chat and its local output folder.`)) {
+      return;
+    }
+    state.dashboard = await request(`/api/shots/${deleteShot}`, { method: 'DELETE' });
+    state.activeShotId = state.dashboard.shots[0]?.id || null;
+    playSound('hype');
     render();
     return;
   }
