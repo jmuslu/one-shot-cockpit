@@ -15,6 +15,7 @@ The key product rule is that completed shots do not become normal follow-up chat
 - Waiting-room entertainment panel for Reddit, YouTube, and web-game roulette integrations
 - Same-page entertainment preview stage with external-link fallback for sources that block embedding
 - Native generated WebAudio feedback sounds for selection, run start, completion, obnoxious casino-style ca-ching, hype hits, and optional intermittent stingers
+- Bundled Kenney Casino Audio chip clips as the physical coin/chip layer for ca-ching
 - Integration plan placeholders for direct AI, Codex/Claude delegation, Bright Data MCP, and game roulette
 
 ## Run Locally
@@ -126,7 +127,9 @@ The next code step is binding Bright Data tools such as `search_engine` and `scr
 
 ## Sound Sources
 
-The app currently uses generated WebAudio effects, including a ca-ching and intermittent stingers. Good asset sources to evaluate for a user-provided sound pack:
+The app uses generated WebAudio effects plus bundled Kenney Casino Audio chip clips for the ca-ching. Kenney Casino Audio is CC0 and the license is included at `public/sounds/casino/KENNEY_CASINO_AUDIO_LICENSE.txt`.
+
+Good asset sources to evaluate for future user-provided sound packs:
 
 - Kenney UI Audio: CC0, 50 UI sounds.
 - ObsydianX Interface SFX Pack 1: CC0, 200+ interface sounds.

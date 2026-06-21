@@ -6,7 +6,8 @@ const state = {
   sound: true,
   audioContext: null,
   ambient: false,
-  ambientTimer: null
+  ambientTimer: null,
+  casinoSamples: []
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -47,6 +48,39 @@ function selectedEntertainment() {
 function audio() {
   state.audioContext ||= new AudioContext();
   return state.audioContext;
+}
+
+const casinoSamplePaths = [
+  '/sounds/casino/chips-collide-1.ogg',
+  '/sounds/casino/chips-collide-2.ogg',
+  '/sounds/casino/chips-collide-3.ogg',
+  '/sounds/casino/chips-collide-4.ogg',
+  '/sounds/casino/chips-handle-1.ogg',
+  '/sounds/casino/chips-handle-2.ogg',
+  '/sounds/casino/chips-handle-3.ogg',
+  '/sounds/casino/chips-stack-1.ogg'
+];
+
+function preloadCasinoSamples() {
+  state.casinoSamples = casinoSamplePaths.map((path) => {
+    const sample = new Audio(path);
+    sample.preload = 'auto';
+    sample.volume = 0.8;
+    return sample;
+  });
+}
+
+function playCasinoSample(index, delay = 0, volume = 0.8, rate = 1) {
+  if (!state.sound || state.casinoSamples.length === 0) {
+    return;
+  }
+  window.setTimeout(() => {
+    const base = state.casinoSamples[index % state.casinoSamples.length];
+    const sample = base.cloneNode();
+    sample.volume = volume;
+    sample.playbackRate = rate;
+    void sample.play().catch(() => {});
+  }, delay);
 }
 
 function tone(frequency, start, duration, gain, type = 'sine') {
@@ -139,16 +173,17 @@ function playSound(name) {
     return;
   }
   if (name === 'cash') {
-    filteredNoise(0, 0.36, 0.09, 5200, 'highpass');
-    filteredNoise(0.06, 0.22, 0.08, 3200, 'bandpass');
-    tone(1567.98, 0, 0.07, 0.08, 'square');
-    tone(2093, 0.052, 0.09, 0.09, 'triangle');
-    tone(2637.02, 0.12, 0.1, 0.075, 'sine');
-    tone(1046.5, 0.17, 0.08, 0.07, 'square');
-    tone(1318.51, 0.23, 0.08, 0.07, 'triangle');
-    tone(1975.53, 0.29, 0.13, 0.08, 'sine');
-    tone(3135.96, 0.38, 0.18, 0.06, 'triangle');
-    filteredNoise(0.34, 0.18, 0.055, 7800, 'highpass');
+    [0, 1, 2, 3, 4, 5, 6, 7].forEach((sample, index) => {
+      playCasinoSample(sample, index * 42, 0.82 - index * 0.035, 0.94 + Math.random() * 0.24);
+    });
+    filteredNoise(0, 0.3, 0.045, 6200, 'highpass');
+    tone(1174.66, 0, 0.06, 0.07, 'square');
+    tone(1567.98, 0.052, 0.075, 0.08, 'triangle');
+    tone(2093, 0.118, 0.08, 0.075, 'sine');
+    tone(2637.02, 0.178, 0.1, 0.075, 'triangle');
+    tone(3135.96, 0.246, 0.13, 0.07, 'sine');
+    tone(4186.01, 0.355, 0.18, 0.055, 'triangle');
+    filteredNoise(0.18, 0.32, 0.04, 8200, 'highpass');
     return;
   }
   if (name === 'hype') {
@@ -588,3 +623,5 @@ document.body.addEventListener('submit', async (event) => {
 load().catch((error) => {
   document.body.innerHTML = `<main class="workspace"><div class="empty">${escapeHtml(error.message)}</div></main>`;
 });
+
+preloadCasinoSamples();
