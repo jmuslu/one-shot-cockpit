@@ -122,6 +122,30 @@ function spawnAgent({ command, args, shell, cwd, input, timeoutMs = 1000 * 60 * 
   });
 }
 
+// Shared agnostic executor: run the configured ONESHOT_AGENT_CMD with a prompt in
+// the given working directory. The prompt is substituted for {prompt} if the
+// template contains it, otherwise piped to stdin. Reused by both the prep-graph
+// dispatch and the Spec-Kit pipeline so there is ONE agent knob.
+export function agentCommandConfigured() {
+  return Boolean(String(process.env.ONESHOT_AGENT_CMD || '').trim());
+}
+
+export function runAgentCommand({ cwd, prompt, timeoutMs }) {
+  const cmd = String(process.env.ONESHOT_AGENT_CMD || '').trim();
+  if (!cmd) {
+    throw new Error('ONESHOT_AGENT_CMD is not set. Configure an agent command to run a build.');
+  }
+  const usesPlaceholder = cmd.includes('{prompt}');
+  const finalCmd = usesPlaceholder ? cmd.replaceAll('{prompt}', shellQuote(prompt)) : cmd;
+  return spawnAgent({
+    command: finalCmd,
+    shell: true,
+    cwd,
+    input: usesPlaceholder ? undefined : prompt,
+    timeoutMs
+  });
+}
+
 function writeRunnerResult(resultPath, provider, sessionId, commandLabel, out) {
   writeFileSync(resultPath, [
     `# ${provider.name} dispatch`,
@@ -158,14 +182,7 @@ async function dispatchAndRun(provider, sessionId, context = {}) {
   // 1) Provider-agnostic shell agent: the configured command is the agent. The
   // spec prompt is substituted for {prompt}, or piped to stdin otherwise.
   if (agentCmd) {
-    const usesPlaceholder = agentCmd.includes('{prompt}');
-    const finalCmd = usesPlaceholder ? agentCmd.replaceAll('{prompt}', shellQuote(prompt)) : agentCmd;
-    const out = await spawnAgent({
-      command: finalCmd,
-      shell: true,
-      cwd: workspace,
-      input: usesPlaceholder ? undefined : prompt
-    });
+    const out = await runAgentCommand({ cwd: workspace, prompt });
     writeRunnerResult(resultPath, provider, sessionId, `ONESHOT_AGENT_CMD: ${agentCmd}`, out);
     return {
       summary: out.code === 0

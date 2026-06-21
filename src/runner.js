@@ -1,46 +1,36 @@
-// Stage 2b: autonomous runner.
+// Autonomous, agent-agnostic Spec-Kit runner.
 //
-// Drives Claude Code headlessly through the Spec-Kit phases for a shot:
-//   specify -> (pause only if open questions remain) -> plan -> tasks -> implement -> done
+// Drives a configured agent (ONESHOT_AGENT_CMD) through the Spec-Kit phases:
+//   specify -> (pause only if [NEEDS CLARIFICATION] remains) -> plan -> tasks -> implement -> done
 //
-// "Least questions possible" is enforced two ways:
-//   1. /speckit-clarify is skipped entirely.
-//   2. A one-shot directive is injected (CLAUDE.md + --append-system-prompt) telling
-//      the agent to resolve ambiguity with documented assumptions instead of asking.
+// "Least questions possible" is enforced by a one-shot directive embedded in each
+// phase prompt: resolve ambiguity with documented assumptions instead of asking.
 // Any [NEEDS CLARIFICATION] markers that survive become the only intake questions.
 //
-// The executor is pluggable: a real one spawns `claude`/`specify`, a mock one
-// produces canned artifacts so the whole pipeline is testable offline. Set
-// ONESHOT_EXECUTOR=mock (env or settings) to force the mock.
+// There is NO agent-specific tooling here: each phase is a plain-text prompt and
+// the artifacts are fixed files (spec.md / plan.md / tasks.md), so any agent CLI
+// that reads a prompt and writes files works. Execution goes through the same
+// shared executor (runAgentCommand) used by the prep-graph workflow.
 
-import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, existsSync, writeFileSync, readFileSync, cpSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
 import { ingestSpec, snapshotArtifact, locateSpecPath } from './speckit.js';
+import { runAgentCommand } from './runners.js';
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const workspacesDir = join(rootDir, 'data', 'workspaces');
 
-// --- configuration (settings table overrides env overrides default) ----------
-function setting(key, fallback) {
-  return db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value || process.env[key] || fallback;
-}
-const claudeBin = () => setting('CLAUDE_BIN', 'claude');
-const specifyBin = () => setting('SPECIFY_BIN', 'specify');
-const permissionMode = () => setting('CLAUDE_PERMISSION_MODE', 'acceptEdits'); // or bypassPermissions in a sandbox
-const maxTurns = () => Number(setting('CLAUDE_MAX_TURNS', '40'));
-const templateDir = () => setting('SPEC_TEMPLATE_DIR', ''); // an existing `specify init` project to copy scaffolding from
-const useMock = () => setting('ONESHOT_EXECUTOR', '') === 'mock';
-
 const ONE_SHOT_DIRECTIVE =
   'You are running in autonomous one-shot mode inside an isolated workspace. ' +
-  'Resolve every ambiguity by choosing the most reasonable option and recording it under the spec\'s Assumptions section. ' +
+  "Resolve every ambiguity by choosing the most reasonable option and recording it under the spec's Assumptions section. " +
   'Do NOT write [NEEDS CLARIFICATION] markers unless a choice would materially change scope or architecture and cannot be safely assumed. ' +
-  'Never pause to ask the user a question. Run the requested phase to completion.';
+  'Never pause to ask the user a question. Run the requested phase to completion and write the required files.';
 
-const CLAUDE_MD = `# One-Shot Cockpit run\n\n${ONE_SHOT_DIRECTIVE}\n`;
+// Dropped into the workspace so file-aware agents (incl. Claude Code via CLAUDE.md)
+// pick up the one-shot directive as project context.
+const AGENT_MD = `# One-Shot Cockpit run\n\n${ONE_SHOT_DIRECTIVE}\n`;
 
 const PHASE_ORDER = ['brief', 'specify', 'plan', 'tasks', 'implement', 'done'];
 const nextPhase = (current) => PHASE_ORDER[PHASE_ORDER.indexOf(current) + 1] || null;
@@ -56,114 +46,87 @@ function ensureWorkspace(shotId) {
   const ws = join(workspacesDir, `shot-${shotId}`);
   if (!existsSync(ws)) {
     mkdirSync(ws, { recursive: true });
-    writeFileSync(join(ws, 'CLAUDE.md'), CLAUDE_MD);
-
-    const template = templateDir();
-    if (template && existsSync(template)) {
-      // Copy just the Spec-Kit scaffolding from an existing initialized project
-      // (avoids the interactive `specify init` script-type prompt).
-      for (const sub of ['.specify', '.claude']) {
-        const src = join(template, sub);
-        if (existsSync(src)) cpSync(src, join(ws, sub), { recursive: true });
-      }
-      try { rmSync(join(ws, '.specify', 'feature.json')); } catch { /* none to remove */ }
-    } else if (!useMock()) {
-      const r = spawnSync(specifyBin(), ['init', '.', '--integration', 'claude'], { cwd: ws, encoding: 'utf8' });
-      if (r.status !== 0) throw new Error(`specify init failed: ${(r.stderr || r.stdout || '').slice(0, 400)}`);
-    }
+    writeFileSync(join(ws, 'AGENT.md'), AGENT_MD);
+    writeFileSync(join(ws, 'CLAUDE.md'), AGENT_MD);
   }
   db.prepare('UPDATE shots SET spec_dir = ? WHERE id = ?').run(ws, shotId);
   return ws;
 }
 
-// --- executor: real -----------------------------------------------------------
-function runClaude(cwd, prompt) {
-  return new Promise((resolve, reject) => {
-    const args = [
-      '-p', prompt,
-      '--permission-mode', permissionMode(),
-      '--max-turns', String(maxTurns()),
-      '--output-format', 'json',
-      '--append-system-prompt', ONE_SHOT_DIRECTIVE
-    ];
-    const child = spawn(claudeBin(), args, { cwd, env: process.env });
-    let out = '';
-    let err = '';
-    child.stdout.on('data', (d) => { out += d; });
-    child.stderr.on('data', (d) => { err += d; });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`claude exited ${code}: ${err.slice(0, 400)}`));
-      let result = out;
-      try { result = JSON.parse(out).result ?? out; } catch { /* plain text */ }
-      resolve({ result });
-    });
-  });
-}
+// --- phase prompts (agent-agnostic plain text) --------------------------------
+function specifyPrompt(brief) {
+  return `${ONE_SHOT_DIRECTIVE}
 
-// --- executor: mock (offline) -------------------------------------------------
-function mockSpec(brief, ambiguous) {
-  const clar = ambiguous ? '\n\nThe authentication approach is [NEEDS CLARIFICATION: which auth provider?].' : '';
-  return `# Feature Specification: Mock Feature
+# Phase: SPECIFY
 
-**Feature Branch**: \`001-mock\`
-**Created**: 2026-06-21
+Write a Spec-Kit feature specification to a file named "spec.md" in the current directory, for this brief:
+
+"${brief}"
+
+Use exactly this Markdown structure so it can be parsed:
+
+# Feature Specification: <short title>
+
+**Feature Branch**: \`001-<slug>\`
+**Created**: <today's date>
 **Status**: Draft
-**Input**: User description: "${brief}"${clar}
+**Input**: User description: "${brief}"
 
-## Requirements *(mandatory)*
+## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: System MUST do the primary thing described in the brief
-- **FR-002**: System MUST persist state locally
+- **FR-001**: System MUST <requirement>
+- **FR-002**: System MUST <requirement>
 
-## Success Criteria *(mandatory)*
+## Success Criteria
 
 ### Measurable Outcomes
 
-- **SC-001**: The core flow works in under 3 seconds
+- **SC-001**: <measurable, testable outcome>
 
 ## Assumptions
 
-- Single-user, local-first; no accounts required
-`;
+- <every assumption you made instead of asking a question>
+
+Only add an inline "[NEEDS CLARIFICATION: <question>]" marker if a decision would materially change scope or architecture and cannot be safely assumed. Write the file now.`;
 }
 
-function runMock(cwd, prompt) {
-  const featureDir = join(cwd, 'specs', '001-mock');
-  if (prompt.startsWith('/speckit-specify')) {
-    const brief = prompt.replace('/speckit-specify', '').trim();
-    mkdirSync(featureDir, { recursive: true });
-    writeFileSync(join(featureDir, 'spec.md'), mockSpec(brief, /ambiguous/i.test(brief)));
-    mkdirSync(join(cwd, '.specify'), { recursive: true });
-    writeFileSync(join(cwd, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/001-mock' }));
-    return Promise.resolve({ result: 'spec written' });
-  }
-  if (prompt.startsWith('/speckit-plan')) {
-    writeFileSync(join(featureDir, 'plan.md'), '# Implementation Plan\n\n- Stack: static HTML/CSS/JS\n- No backend\n');
-    return Promise.resolve({ result: 'plan written' });
-  }
-  if (prompt.startsWith('/speckit-tasks')) {
-    writeFileSync(join(featureDir, 'tasks.md'), '# Tasks\n\n- [ ] T001 Scaffold\n- [ ] T002 Implement core flow\n- [ ] T003 Persist state\n');
-    return Promise.resolve({ result: 'tasks written' });
-  }
-  if (prompt.startsWith('/speckit-implement')) {
-    const out = join(cwd, 'app');
-    mkdirSync(out, { recursive: true });
-    writeFileSync(join(out, 'index.html'), '<!doctype html><meta charset="utf-8"><title>Mock build</title><h1>Built by mock runner</h1>');
-    return Promise.resolve({ result: 'implemented' });
-  }
-  return Promise.resolve({ result: 'noop' });
+function planPrompt() {
+  return `${ONE_SHOT_DIRECTIVE}
+
+# Phase: PLAN
+
+Read "spec.md" in the current directory, then write an implementation plan to "plan.md" covering: the chosen stack/architecture, key components, data model, and the build approach. Keep it concise and buildable. Write the file now.`;
 }
 
-const agent = (cwd, prompt) => (useMock() ? runMock(cwd, prompt) : runClaude(cwd, prompt));
+function tasksPrompt() {
+  return `${ONE_SHOT_DIRECTIVE}
 
-// --- artifact helpers ---------------------------------------------------------
+# Phase: TASKS
+
+Read "spec.md" and "plan.md" in the current directory, then write "tasks.md": an ordered checklist of implementation tasks, one per line as "- [ ] T001 <task>" (T001, T002, ...). Write the file now.`;
+}
+
+function implementPrompt() {
+  return `${ONE_SHOT_DIRECTIVE}
+
+# Phase: IMPLEMENT
+
+Read "spec.md", "plan.md", and "tasks.md" in the current directory, then build the actual project: create every source file needed for a working, runnable deliverable in this directory (for a web app, an index.html plus its assets). Implement every task. Build it now.`;
+}
+
+// --- run a phase through the shared agnostic executor -------------------------
+async function runAgent(ws, prompt) {
+  const out = await runAgentCommand({ cwd: ws, prompt, timeoutMs: 1000 * 60 * 20 });
+  if (out.code !== 0) {
+    throw new Error(`agent exited ${out.code ?? 'with no code'}${out.timedOut ? ' (timed out)' : ''}: ${(out.stderr || '').slice(0, 300)}`);
+  }
+  return out;
+}
+
 function snapshotFeatureFile(shotId, ws, name) {
-  const specPath = locateSpecPath(ws);
-  if (!specPath) return;
-  const p = join(dirname(specPath), name);
+  const p = join(ws, name);
   if (existsSync(p)) snapshotArtifact(shotId, name, p, readFileSync(p, 'utf8'));
 }
 
@@ -181,9 +144,9 @@ async function runOnePhase(shotId, phase, ws) {
 
   if (phase === 'specify') {
     const shot = getShot(shotId);
-    await agent(ws, `/speckit-specify ${shot.prompt}`);
+    await runAgent(ws, specifyPrompt(shot.prompt));
     const specPath = locateSpecPath(ws);
-    if (!specPath) throw new Error('specify produced no spec.md');
+    if (!specPath) throw new Error('specify phase produced no spec.md');
     const { spec } = ingestSpec(shotId, { specPath });
     setPhase(shotId, 'specify');
     if (spec.needsClarification.length) {
@@ -195,21 +158,21 @@ async function runOnePhase(shotId, phase, ws) {
   }
 
   if (phase === 'plan') {
-    await agent(ws, '/speckit-plan');
+    await runAgent(ws, planPrompt());
     snapshotFeatureFile(shotId, ws, 'plan.md');
     setPhase(shotId, 'plan');
     return false;
   }
 
   if (phase === 'tasks') {
-    await agent(ws, '/speckit-tasks');
+    await runAgent(ws, tasksPrompt());
     snapshotFeatureFile(shotId, ws, 'tasks.md');
     setPhase(shotId, 'tasks');
     return false;
   }
 
   if (phase === 'implement') {
-    await agent(ws, '/speckit-implement');
+    await runAgent(ws, implementPrompt());
     setPhase(shotId, 'implement');
     finish(shotId, ws);
     return false;
@@ -230,8 +193,9 @@ export async function runPipeline(shotId) {
   try {
     while (true) {
       const phase = getShot(shotId).phase;
+      if (phase === 'done') return; // implement already finished it
       const next = nextPhase(phase);
-      if (!next || next === 'done') { finish(shotId, ws); return; }
+      if (!next) { finish(shotId, ws); return; }
       const paused = await runOnePhase(shotId, next, ws);
       if (paused) return;
     }

@@ -188,24 +188,31 @@ export function parseSpec(markdown) {
 // Locating the active spec via Spec-Kit's pointer file
 // ---------------------------------------------------------------------------
 
-// Reads `<projectDir>/.specify/feature.json` -> { feature_directory }
-// and returns the absolute path to that feature's spec.md, or null.
+// Returns the absolute path to the workspace's spec.md, or null. Agent-agnostic:
+// it looks for spec.md at the known workspace locations the runner writes to, and
+// falls back to Spec-Kit's `.specify/feature.json` pointer for compatibility with
+// a real `specify`-scaffolded project.
 export function locateSpecPath(projectDir) {
   if (!projectDir) return null;
-  const pointer = join(projectDir, '.specify', 'feature.json');
-  if (!existsSync(pointer)) return null;
 
-  let featureDir;
-  try {
-    ({ feature_directory: featureDir } = JSON.parse(readFileSync(pointer, 'utf8')));
-  } catch {
-    return null;
+  for (const candidate of [join(projectDir, 'spec.md'), join(projectDir, 'specs', 'spec.md')]) {
+    if (existsSync(candidate)) return candidate;
   }
-  if (!featureDir) return null;
 
-  const dir = isAbsolute(featureDir) ? featureDir : join(projectDir, featureDir);
-  const specPath = join(dir, 'spec.md');
-  return existsSync(specPath) ? specPath : null;
+  const pointer = join(projectDir, '.specify', 'feature.json');
+  if (existsSync(pointer)) {
+    try {
+      const { feature_directory: featureDir } = JSON.parse(readFileSync(pointer, 'utf8'));
+      if (featureDir) {
+        const dir = isAbsolute(featureDir) ? featureDir : join(projectDir, featureDir);
+        const specPath = join(dir, 'spec.md');
+        if (existsSync(specPath)) return specPath;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
