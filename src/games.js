@@ -53,11 +53,6 @@ export const ioGames = [
     title: 'LOLBeans.io',
     url: 'https://lolbeans.io/',
     reason: 'Obstacle-course multiplayer for a lighter roulette roll.'
-  },
-  {
-    title: 'Surviv legacy / Kongregate',
-    url: 'https://www.kongregate.com/games/monumental/surviv',
-    reason: 'The original surviv.io was sunset; this is the current legacy/successor-ish pointer.'
   }
 ];
 
