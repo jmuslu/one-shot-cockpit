@@ -90,7 +90,9 @@ const shotMigrations = [
   ['session_id', "ALTER TABLE shots ADD COLUMN session_id TEXT NOT NULL DEFAULT ''"],
   ['workspace', "ALTER TABLE shots ADD COLUMN workspace TEXT NOT NULL DEFAULT ''"],
   ['phase', "ALTER TABLE shots ADD COLUMN phase TEXT NOT NULL DEFAULT 'brief'"],
-  ['spec_dir', "ALTER TABLE shots ADD COLUMN spec_dir TEXT NOT NULL DEFAULT ''"]
+  ['spec_dir', "ALTER TABLE shots ADD COLUMN spec_dir TEXT NOT NULL DEFAULT ''"],
+  // Which runner a shot uses: 'prep-graph' (agnostic agent loop) or 'speckit'.
+  ['workflow', "ALTER TABLE shots ADD COLUMN workflow TEXT NOT NULL DEFAULT 'prep-graph'"]
 ];
 for (const [name, ddl] of shotMigrations) {
   if (!shotColumns.has(name)) {

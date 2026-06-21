@@ -728,7 +728,12 @@ $('#shotForm').addEventListener('submit', async (event) => {
   try {
     state.dashboard = await request('/api/shots', {
       method: 'POST',
-      body: JSON.stringify({ title: data.title, prompt: data.prompt, runner_provider: data.runner })
+      body: JSON.stringify({
+        title: data.title,
+        prompt: data.prompt,
+        runner_provider: data.runner,
+        workflow: data.speckit === 'on' ? 'speckit' : 'prep-graph'
+      })
     });
     state.activeShotId = state.dashboard.shots[0]?.id || null;
     playSound('start');
